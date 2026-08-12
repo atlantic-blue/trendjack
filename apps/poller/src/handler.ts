@@ -20,7 +20,6 @@ import { S3DigestPublisher } from "./s3-publisher.ts";
  * the busiest, and it costs nothing extra: the whole list arrives in one request.
  */
 const POSTS_PER_CREATOR = 80;
-const WINDOW_HOURS = 72;
 const CANDIDATES = 20;
 /** A gap between creators, so a round does not arrive as one burst of requests. */
 const PACE_MS = 2_000;
@@ -39,7 +38,7 @@ export class MissingSettingError extends Error {
  * start rather than half way through. A run that polled the panel and then could not publish
  * would spend the requests and show nothing for them.
  */
-export async function handler(): Promise<{ watched: number; candidates: number }> {
+export async function handler(): Promise<{ watched: number; ranges: number }> {
   const bucket = required("TRENDJACK_BUCKET");
   const table = required("TRENDJACK_TABLE");
   const panel = parsePanel(required("TRENDJACK_PANEL_JSON"));
@@ -51,12 +50,16 @@ export async function handler(): Promise<{ watched: number; candidates: number }
   ]);
   const now = Date.now();
 
-  const { poll, json } = await pollOnce({
+  const { poll, byRange } = await pollOnce({
     panel,
     sources,
     store: new DynamoStore({ client: new DynamoDBClient({ region }), tableName: table }),
     publisher: new S3DigestPublisher({
       s3: new S3Client({ region }),
+      fetchPoster: async (url) => {
+        const response = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+        return response.ok ? await response.arrayBuffer() : undefined;
+      },
       cloudFront: new CloudFrontClient({ region: "us-east-1" }),
       bucket,
       ...(distributionId ? { distributionId } : {}),
@@ -64,13 +67,12 @@ export async function handler(): Promise<{ watched: number; candidates: number }
     }),
     now,
     postsPerCreator: POSTS_PER_CREATOR,
-    windowHours: WINDOW_HOURS,
     limit: CANDIDATES,
     pace: () => new Promise((resolve) => setTimeout(resolve, PACE_MS)),
     look: tikTokLookUp(),
   });
 
-  return { watched: poll.watched, candidates: json.candidates.length };
+  return { watched: poll.watched, ranges: byRange.size };
 }
 
 function required(name: string): string {

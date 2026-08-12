@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { App } from "./App.tsx";
 import type { DigestJson } from "./digest.ts";
 
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  // The picker writes the chosen range into the address, and jsdom keeps that between cases.
+  window.history.replaceState(null, "", "/");
 });
 
 const NOW = 1_754_000_000_000;
@@ -62,6 +64,88 @@ describe("the page", () => {
   test("a digest in a format it cannot read is refused rather than drawn", async () => {
     serve(digest({ version: 99 }));
     render(<App />);
-    await waitFor(() => expect(screen.getByText(/No digest today/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/No digest for this range/)).toBeTruthy());
   });
+});
+
+describe("the range picker", () => {
+  test("offers a day up to a month, and nothing longer", async () => {
+    serve(digest());
+    render(<App />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "3 days" })).toBeTruthy());
+    for (const label of ["24 hours", "7 days", "30 days"]) {
+      expect(screen.getByRole("button", { name: label })).toBeTruthy();
+    }
+  });
+
+  test("reads three days by default", async () => {
+    const asked: string[] = [];
+    vi.stubGlobal("fetch", async (url: string) => {
+      asked.push(url);
+      return new Response(JSON.stringify(digest()), { status: 200 });
+    });
+    render(<App />);
+    await waitFor(() => expect(asked).toContain("digest-72h.json"));
+  });
+
+  test("choosing a range reads that range's file", async () => {
+    const asked: string[] = [];
+    vi.stubGlobal("fetch", async (url: string) => {
+      asked.push(url);
+      return new Response(JSON.stringify(digest()), { status: 200 });
+    });
+    render(<App />);
+    await waitFor(() => expect(asked.length).toBe(1));
+    fireEvent.click(screen.getByRole("button", { name: "30 days" }));
+    await waitFor(() => expect(asked).toContain("digest-30d.json"));
+  });
+
+  test("the chosen range says so, so it is obvious which is on", async () => {
+    serve(digest());
+    render(<App />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "3 days" })).toBeTruthy());
+    expect(screen.getByRole("button", { name: "3 days" }).getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "24 hours" }).getAttribute("aria-pressed")).toBe(
+      "false",
+    );
+  });
+
+  test("the picker stays on screen when a range has no digest, so another can be chosen", async () => {
+    vi.stubGlobal("fetch", async () => new Response("gone", { status: 404 }));
+    render(<App />);
+    await waitFor(() => expect(screen.getByText(/No digest for this range/)).toBeTruthy());
+    expect(screen.getByRole("button", { name: "7 days" })).toBeTruthy();
+  });
+});
+
+test("the chosen range is in the address, so a view can be sent to somebody", async () => {
+  serve(digest());
+  render(<App />);
+  await waitFor(() => expect(screen.getByRole("button", { name: "7 days" })).toBeTruthy());
+  fireEvent.click(screen.getByRole("button", { name: "7 days" }));
+  await waitFor(() => expect(window.location.search).toContain("range=7d"));
+});
+
+test("a range in the address is the one that opens", async () => {
+  window.history.replaceState(null, "", "/?range=30d");
+  const asked: string[] = [];
+  vi.stubGlobal("fetch", async (url: string) => {
+    asked.push(url);
+    return new Response(JSON.stringify(digest()), { status: 200 });
+  });
+  render(<App />);
+  await waitFor(() => expect(asked).toContain("digest-30d.json"));
+});
+
+test("a range in the address that we do not offer falls back rather than asking for a missing file", async () => {
+  window.history.replaceState(null, "", "/?range=all-time");
+  const asked: string[] = [];
+  vi.stubGlobal("fetch", async (url: string) => {
+    asked.push(url);
+    return new Response(JSON.stringify(digest()), { status: 200 });
+  });
+  render(<App />);
+  await waitFor(() => expect(asked).toContain("digest-72h.json"));
 });

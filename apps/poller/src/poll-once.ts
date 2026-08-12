@@ -3,11 +3,12 @@ import type { Panel, Platform } from "@trendjack/core/contracts/types.ts";
 import { buildDigest } from "@trendjack/core/digest/build.ts";
 import { toDigestJson, type DigestJson } from "@trendjack/core/digest/json.ts";
 import { enrichDigest, type LookUp } from "@trendjack/core/digest/enrich.ts";
+import { RANGES } from "@trendjack/core/digest/ranges.ts";
 import { pollPanel, type PollReport } from "@trendjack/core/poll/poll.ts";
 
-/** Writes the file the front end reads, then clears it from the cache. */
+/** Writes the files the page reads, then clears what changed from the cache. */
 export interface DigestPublisher {
-  publish(json: DigestJson): Promise<void>;
+  publish(byRange: Map<string, DigestJson>): Promise<void>;
 }
 
 export interface PollOnceOptions {
@@ -17,7 +18,6 @@ export interface PollOnceOptions {
   publisher: DigestPublisher;
   now: number;
   postsPerCreator: number;
-  windowHours: number;
   limit: number;
   provenLikes?: number;
   pace?: () => Promise<void>;
@@ -27,7 +27,7 @@ export interface PollOnceOptions {
 
 export interface PollOnceResult {
   poll: PollReport;
-  json: DigestJson;
+  byRange: Map<string, DigestJson>;
 }
 
 /**
@@ -45,17 +45,22 @@ export async function pollOnce(options: PollOnceOptions): Promise<PollOnceResult
     ...(options.pace ? { pace: options.pace } : {}),
   });
 
-  const digest = await buildDigest({
-    store: options.store,
-    panel: options.panel,
-    now: options.now,
-    windowHours: options.windowHours,
-    limit: options.limit,
-    ...(options.provenLikes === undefined ? {} : { provenLikes: options.provenLikes }),
-  });
+  // One digest per range, each built for its own window. The window is not only a filter: how
+  // many other creators are on a shape, and how crowded a sound is, are counted inside it.
+  const byRange = new Map<string, DigestJson>();
+  for (const range of RANGES) {
+    const digest = await buildDigest({
+      store: options.store,
+      panel: options.panel,
+      now: options.now,
+      windowHours: range.hours,
+      limit: options.limit,
+      ...(options.provenLikes === undefined ? {} : { provenLikes: options.provenLikes }),
+    });
+    const built = toDigestJson(digest);
+    byRange.set(range.key, options.look ? await enrichDigest(built, options.look) : built);
+  }
 
-  const built = toDigestJson(digest);
-  const json = options.look ? await enrichDigest(built, options.look) : built;
-  await options.publisher.publish(json);
-  return { poll, json };
+  await options.publisher.publish(byRange);
+  return { poll, byRange };
 }

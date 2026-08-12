@@ -80,3 +80,32 @@ export function notesFor(candidate: DigestCandidate): string[] {
   if (candidate.qualityRatio < 0.8) notes.push("engagement below their normal");
   return notes;
 }
+
+/**
+ * The windows a reader can choose between. Kept in step with the poller by the version check:
+ * each range is a file the run publishes, and a range with no file shows as unavailable rather
+ * than as an empty day.
+ */
+export interface Range {
+  key: string;
+  label: string;
+}
+
+export const RANGES: Range[] = [
+  { key: "24h", label: "24 hours" },
+  { key: "72h", label: "3 days" },
+  { key: "7d", label: "7 days" },
+  { key: "30d", label: "30 days" },
+];
+
+export const DEFAULT_RANGE = "72h";
+
+/** The range in the address, so a chosen view can be sent to somebody. */
+export function rangeFromLocation(search: string): string {
+  const asked = new URLSearchParams(search).get("range");
+  return RANGES.some((range) => range.key === asked) ? (asked as string) : DEFAULT_RANGE;
+}
+
+export function fileFor(rangeKey: string): string {
+  return `digest-${rangeKey}.json`;
+}

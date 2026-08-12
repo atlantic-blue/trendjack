@@ -11,9 +11,13 @@ const NOW = 1_754_000_000_000;
 const panel: Panel = [{ platform: "tiktok", kind: "creator", handle: "alice" }];
 
 class Recorder implements DigestPublisher {
-  published: DigestJson[] = [];
-  async publish(json: DigestJson): Promise<void> {
-    this.published.push(json);
+  published: Map<string, DigestJson>[] = [];
+  async publish(byRange: Map<string, DigestJson>): Promise<void> {
+    this.published.push(byRange);
+  }
+  /** The default range, which is what the old assertions were about. */
+  get standard(): DigestJson | undefined {
+    return this.published[0]?.get("72h");
   }
 }
 
@@ -87,27 +91,27 @@ function run(publisher: DigestPublisher, views = 12_000, likes = 150_000) {
     publisher,
     now: NOW,
     postsPerCreator: 30,
-    windowHours: 72,
     limit: 10,
   });
 }
 
-test("a round publishes exactly one file", async () => {
+test("a round publishes one digest for every range, in one call", async () => {
   const recorder = new Recorder();
   await run(recorder);
   assert.equal(recorder.published.length, 1);
+  assert.equal(recorder.published[0]?.size, 4);
 });
 
 test("the file carries its format version, so a front end can refuse one it cannot read", async () => {
   const recorder = new Recorder();
   await run(recorder);
-  assert.equal(recorder.published[0]?.version, DIGEST_FORMAT_VERSION);
+  assert.equal(recorder.standard?.version, DIGEST_FORMAT_VERSION);
 });
 
 test("the file carries what was held back, not only what was chosen", async () => {
   const recorder = new Recorder();
   await run(recorder);
-  const json = recorder.published[0];
+  const json = recorder.standard;
   assert.equal(json?.heldBack.count, 1);
   assert.match(json?.heldBack.reasons[0]?.reason ?? "", /no rate could be read/);
 });
@@ -115,14 +119,14 @@ test("the file carries what was held back, not only what was chosen", async () =
 test("a video above the like floor is published as a format that worked at scale", async () => {
   const recorder = new Recorder();
   await run(recorder, 12_000, 150_000);
-  assert.equal(recorder.published[0]?.proven.length, 1);
-  assert.equal(recorder.published[0]?.proven[0]?.likes, 150_000);
+  assert.equal(recorder.standard?.proven.length, 1);
+  assert.equal(recorder.standard?.proven[0]?.likes, 150_000);
 });
 
 test("a video below the like floor is not published as proven", async () => {
   const recorder = new Recorder();
   await run(recorder, 12_000, 900);
-  assert.deepEqual(recorder.published[0]?.proven, []);
+  assert.deepEqual(recorder.standard?.proven, []);
 });
 
 test("nothing is published when the whole round failed, so yesterday's file stays", async () => {
@@ -141,7 +145,6 @@ test("nothing is published when the whole round failed, so yesterday's file stay
       publisher: recorder,
       now: NOW,
       postsPerCreator: 30,
-      windowHours: 72,
       limit: 10,
     }),
   );
@@ -152,6 +155,6 @@ test("the counts in the file match what was polled", async () => {
   const recorder = new Recorder();
   const { poll } = await run(recorder);
   assert.equal(poll.observationsStored, 21);
-  assert.equal(recorder.published[0]?.postsConsidered, 1);
-  assert.equal(recorder.published[0]?.creatorsSeen, 1);
+  assert.equal(recorder.standard?.postsConsidered, 1);
+  assert.equal(recorder.standard?.creatorsSeen, 1);
 });
