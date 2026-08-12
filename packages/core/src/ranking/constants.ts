@@ -44,6 +44,19 @@ export const SATURATION_CREATORS = 8;
  */
 export const PROVEN_LIKES = 100_000;
 
+/**
+ * How far above its creator's normal a video must be before it is worth a look. Below this it
+ * is an ordinary post for that creator, and calling it a candidate would make the page lie.
+ */
+export const CANDIDATE_OUTLIER = 3;
+
+/**
+ * How far back the proven list looks. A format that reached a lot of people is worth copying
+ * whether it did so today or three weeks ago, so it is not bound by the window that exists to
+ * catch a video while it is still climbing.
+ */
+export const PROVEN_WINDOW_HOURS = 30 * 24;
+
 /** Bands are for reading, not for scoring. */
 export const BAND_THRESHOLDS = [
   { band: "monster", atLeast: 20 },

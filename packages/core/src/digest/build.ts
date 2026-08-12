@@ -1,7 +1,14 @@
 import type { Store } from "../contracts/ports.ts";
 import type { Observation, Panel, Post, Score } from "../contracts/types.ts";
 import type { SettledPost } from "../ranking/baseline.ts";
-import { BASELINE_POSTS, HOUR_MS, PROVEN_LIKES, SETTLED_AFTER_MS } from "../ranking/constants.ts";
+import {
+  BASELINE_POSTS,
+  CANDIDATE_OUTLIER,
+  HOUR_MS,
+  PROVEN_LIKES,
+  PROVEN_WINDOW_HOURS,
+  SETTLED_AFTER_MS,
+} from "../ranking/constants.ts";
 import { rank, scorePost, type ScoreOutcome } from "../ranking/score.ts";
 
 export interface DigestRow {
@@ -38,6 +45,8 @@ export interface BuildOptions {
   limit: number;
   /** Likes a video needs to count as a format that works at scale. */
   provenLikes?: number;
+  /** How far back the proven list looks. Far wider than the window for candidates. */
+  provenWindowHours?: number;
 }
 
 /**
@@ -49,6 +58,7 @@ export interface BuildOptions {
  */
 export async function buildDigest(options: BuildOptions): Promise<Digest> {
   const since = options.now - options.windowHours * HOUR_MS;
+  const provenSince = options.now - (options.provenWindowHours ?? PROVEN_WINDOW_HOURS) * HOUR_MS;
   const posts = await options.store.postsSince(since);
   const gathered = await Promise.all(posts.map((post) => gather(options.store, post, options.now)));
 
@@ -74,8 +84,11 @@ export async function buildDigest(options: BuildOptions): Promise<Digest> {
     windowHours: options.windowHours,
     postsConsidered: posts.length,
     creatorsSeen: new Set(posts.map((post) => post.creatorId)).size,
-    candidates: ranked.slice(0, options.limit).map((each) => row(each, byPost)),
-    proven: provenFrom(gathered, options.provenLikes ?? PROVEN_LIKES, options.limit),
+    candidates: ranked
+      .filter((score) => score.features.outlier >= CANDIDATE_OUTLIER)
+      .slice(0, options.limit)
+      .map((each) => row(each, byPost)),
+    proven: await provenFrom(options, provenSince),
     heldBack: suppressed.map((each) => row(each, byPost)),
     unscored: outcomes
       .filter((each) => !each.scored)
@@ -175,14 +188,15 @@ function row(score: Score, byPost: Map<string, Post>): DigestRow {
  * the time, so the score for one of them sits near their normal and the ranking would drop it.
  * The two lists answer different questions: the candidates grow now, these worked at scale.
  */
-function provenFrom(gathered: Gathered[], floor: number, limit: number): ProvenRow[] {
+async function provenFrom(options: BuildOptions, since: number): Promise<ProvenRow[]> {
+  const floor = options.provenLikes ?? PROVEN_LIKES;
   const rows: ProvenRow[] = [];
-  for (const each of gathered) {
-    const likes = mostLikes(each.observations);
+  for (const post of await options.store.postsSince(since)) {
+    const likes = mostLikes(await options.store.observationsFor(post.postId));
     if (likes === undefined || likes < floor) continue;
-    rows.push({ post: each.post, likes });
+    rows.push({ post, likes });
   }
-  return rows.sort((left, right) => right.likes - left.likes).slice(0, limit);
+  return rows.sort((left, right) => right.likes - left.likes).slice(0, options.limit);
 }
 
 /** The largest like count seen, because a later reading can be missing the field. */

@@ -269,8 +269,9 @@ test("a proven video appears even when its own creator makes it look ordinary", 
   });
   const digest = await build(store);
   assert.equal(digest.proven.length, 1);
-  // Its own creator makes 3 million views normal, so the score says nothing special happened.
-  assert.ok((digest.candidates[0]?.score.features.outlier ?? 0) < 1.1);
+  // Its own creator makes 3 million views normal, so nothing special happened and it is not a
+  // candidate. Reading candidates[0] and finding nothing there proved nothing, so this counts.
+  assert.deepEqual(digest.candidates, []);
 });
 
 test("proven videos are listed most liked first", async () => {
@@ -314,4 +315,58 @@ test("the floor can be lowered for a niche where nothing reaches a hundred thous
     provenLikes: 3_000,
   });
   assert.equal(digest.proven.length, 1);
+});
+
+test("a video that barely beats its creator's normal is not worth a look", async () => {
+  const store = new InMemoryStore();
+  await seed(store, { creator: "alice", postId: "meh", ageHours: 6, views: [1_100, 1_400, 1_900] });
+  const digest = await build(store);
+  assert.deepEqual(digest.candidates, []);
+});
+
+test("a video well above its creator's normal is", async () => {
+  const store = new InMemoryStore();
+  await seed(store, { creator: "alice", postId: "hot", ageHours: 6, views: [2_000, 6_000, 9_000] });
+  const digest = await build(store);
+  assert.equal(digest.candidates.length, 1);
+  assert.ok((digest.candidates[0]?.score.features.outlier ?? 0) >= 3);
+});
+
+test("a video right on the bar is included, so the bar is a floor and not a gap", async () => {
+  const store = new InMemoryStore();
+  await seed(store, {
+    creator: "alice",
+    postId: "exact",
+    ageHours: 6,
+    views: [1_000, 2_000, 3_100],
+  });
+  const digest = await build(store);
+  assert.equal(digest.candidates.length, 1);
+});
+
+test("a format that worked at scale counts even when it is far older than the window", async () => {
+  const store = new InMemoryStore();
+  await seed(store, {
+    creator: "alice",
+    postId: "old-hit",
+    ageHours: 20 * 24,
+    views: [9_000_000],
+    likes: [400_000],
+  });
+  const digest = await build(store);
+  assert.equal(digest.postsConsidered, 0);
+  assert.equal(digest.proven.length, 1);
+  assert.equal(digest.proven[0]?.post.postId, "old-hit");
+});
+
+test("a format older than the proven window is not counted", async () => {
+  const store = new InMemoryStore();
+  await seed(store, {
+    creator: "alice",
+    postId: "ancient",
+    ageHours: 40 * 24,
+    views: [9_000_000],
+    likes: [400_000],
+  });
+  assert.deepEqual((await build(store)).proven, []);
 });
