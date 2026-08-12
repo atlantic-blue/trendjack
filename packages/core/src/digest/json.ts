@@ -35,12 +35,18 @@ export interface DigestJsonProven {
   url: string;
   creator: string;
   likes: number;
+  postedAt: number;
+  /** Every card says how old its video is, whichever list it is in. */
+  ageHours: number;
 }
 
 export interface DigestJson {
   version: number;
   generatedAt: number;
+  /** How far back the candidates were drawn from. */
   windowHours: number;
+  /** How far back the proven list was drawn from. Far wider, and it is a different claim. */
+  provenWindowHours: number;
   postsConsidered: number;
   creatorsSeen: number;
   candidates: DigestJsonCandidate[];
@@ -61,6 +67,7 @@ export function toDigestJson(digest: Digest): DigestJson {
     version: DIGEST_FORMAT_VERSION,
     generatedAt: digest.generatedAt,
     windowHours: digest.windowHours,
+    provenWindowHours: digest.provenWindowHours,
     postsConsidered: digest.postsConsidered,
     creatorsSeen: digest.creatorsSeen,
     candidates: digest.candidates.map((row) => ({
@@ -85,6 +92,8 @@ export function toDigestJson(digest: Digest): DigestJson {
       url: row.post.url,
       creator: row.post.creatorId,
       likes: row.likes,
+      postedAt: row.post.postedAt,
+      ageHours: round(Math.max(0, (digest.generatedAt - row.post.postedAt) / 3_600_000)),
     })),
     heldBack: {
       count: digest.heldBack.length,

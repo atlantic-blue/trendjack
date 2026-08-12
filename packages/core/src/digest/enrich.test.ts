@@ -8,6 +8,7 @@ function digestOf(): DigestJson {
     version: DIGEST_FORMAT_VERSION,
     generatedAt: 1,
     windowHours: 72,
+    provenWindowHours: 720,
     postsConsidered: 2,
     creatorsSeen: 1,
     candidates: [
@@ -30,7 +31,14 @@ function digestOf(): DigestJson {
       },
     ],
     proven: [
-      { postId: "b", url: "https://www.tiktok.com/@who/video/b", creator: "who", likes: 200_000 },
+      {
+        postId: "b",
+        url: "https://www.tiktok.com/@who/video/b",
+        creator: "who",
+        likes: 200_000,
+        postedAt: 1,
+        ageHours: 30,
+      },
     ],
     heldBack: { count: 0, reasons: [] },
     unscored: { count: 0, reasons: [] },

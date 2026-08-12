@@ -30,6 +30,7 @@ export interface ProvenRow {
 export interface Digest {
   generatedAt: number;
   windowHours: number;
+  provenWindowHours: number;
   postsConsidered: number;
   creatorsSeen: number;
   candidates: DigestRow[];
@@ -83,6 +84,7 @@ export async function buildDigest(options: BuildOptions): Promise<Digest> {
   return {
     generatedAt: options.now,
     windowHours: options.windowHours,
+    provenWindowHours: options.provenWindowHours ?? PROVEN_WINDOW_HOURS,
     postsConsidered: posts.length,
     creatorsSeen: new Set(posts.map((post) => post.creatorId)).size,
     candidates: ranked

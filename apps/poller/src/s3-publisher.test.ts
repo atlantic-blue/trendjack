@@ -7,6 +7,7 @@ const json: DigestJson = {
   version: DIGEST_FORMAT_VERSION,
   generatedAt: 1_754_000_000_000,
   windowHours: 72,
+  provenWindowHours: 720,
   postsConsidered: 4,
   creatorsSeen: 2,
   candidates: [],

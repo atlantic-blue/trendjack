@@ -46,6 +46,7 @@ function digestOf(overrides: Partial<Digest> = {}): Digest {
   return {
     generatedAt: NOW,
     windowHours: 72,
+    provenWindowHours: 720,
     postsConsidered: 48,
     creatorsSeen: 12,
     candidates: [row()],

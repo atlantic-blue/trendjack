@@ -53,12 +53,22 @@ body {
   color: var(--accent);
 }
 
+/* The date is when the digest was made. The videos are older, and each list says how much. */
+.stamp {
+  margin: var(--s4) 0 0;
+  font-size: var(--t-small);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
 .today {
   font-size: var(--t-display);
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.05;
-  margin: var(--s4) 0 var(--s2);
+  margin: var(--s1) 0 var(--s2);
 }
 
 .summary {
@@ -374,6 +384,16 @@ body {
 @media (max-width: 640px) {
   .page {
     padding: var(--s4) var(--s3) var(--s6);
+  }
+
+  /* The date is when the digest was made. The videos are older, and each list says how much. */
+  .stamp {
+    margin: var(--s4) 0 0;
+    font-size: var(--t-small);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
   }
 
   .today {
