@@ -71,6 +71,17 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+      - name: Note what the poller has written
+        # Taken before the sync, because the sync is the step that can destroy it. Comparing
+        # before with after is the only check that works on a first deploy too, when the poller
+        # has never run and there is correctly nothing there.
+        run: |
+          bucket=$(terraform -chdir=infra output -raw site_bucket)
+          aws s3api list-objects-v2 --bucket "$bucket" \
+            --query "Contents[?starts_with(Key, 'digest') || starts_with(Key, 'posters/')].Key" \
+            --output text | tr '\t' '\n' | sort > before.txt
+          echo "the poller has written $(grep -c . before.txt || true) files"
+
       - name: Publish the page
         # Two things this must not do.
         #
@@ -94,15 +105,17 @@ jobs:
 
       - name: Prove the deploy did not delete the poller's work
         # The sync above is the one step that can destroy data, so it is checked rather than
-        # trusted. A missing digest does not 404: CloudFront answers with the page itself and a
-        # 200, so the only way to see the fault is to read what came back.
+        # trusted. Nothing that was there before may be gone after. A missing digest does not
+        # answer 404 either: the distribution serves the page itself with a 200, so a deletion
+        # would show up as a broken page rather than as a missing file.
         run: |
           bucket=$(terraform -chdir=infra output -raw site_bucket)
-          for key in digest.json digest-24h.json digest-72h.json digest-7d.json digest-30d.json; do
-            if aws s3api head-object --bucket "$bucket" --key "$key" > /dev/null 2>&1; then
-              echo "kept $key"
-            else
-              echo "MISSING $key. The sync deleted data the poller wrote."
-              exit 1
-            fi
-          done
+          aws s3api list-objects-v2 --bucket "$bucket" \
+            --query "Contents[?starts_with(Key, 'digest') || starts_with(Key, 'posters/')].Key" \
+            --output text | tr '\t' '\n' | sort > after.txt
+          if ! gone=$(comm -23 before.txt after.txt) || [ -n "$gone" ]; then
+            echo "The sync deleted data the poller wrote:"
+            echo "$gone"
+            exit 1
+          fi
+          echo "kept all $(grep -c . before.txt || true) files the poller had written" 
