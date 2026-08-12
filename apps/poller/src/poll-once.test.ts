@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import type { Sighting, TrendSource } from "../contracts/ports.ts";
-import type { CreatorId, Panel, Platform, PostId } from "../contracts/types.ts";
-import { DAY_MS, HOUR_MS } from "../ranking/constants.ts";
-import { InMemoryStore } from "../store/memory.ts";
-import { DIGEST_FORMAT_VERSION, type DigestJson } from "../digest/json.ts";
+import type { Sighting, TrendSource } from "@trendjack/core/contracts/ports.ts";
+import type { CreatorId, Panel, Platform, PostId } from "@trendjack/core/contracts/types.ts";
+import { DAY_MS, HOUR_MS } from "@trendjack/core/ranking/constants.ts";
+import { InMemoryStore } from "@trendjack/core/store/memory.ts";
+import { DIGEST_FORMAT_VERSION, type DigestJson } from "@trendjack/core/digest/json.ts";
 import { pollOnce, type DigestPublisher } from "./poll-once.ts";
 
 const NOW = 1_754_000_000_000;

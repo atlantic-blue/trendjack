@@ -1,8 +1,8 @@
-import type { Store, TrendSource } from "../contracts/ports.ts";
-import type { Panel, Platform } from "../contracts/types.ts";
-import { buildDigest } from "../digest/build.ts";
-import { renderDigest } from "../digest/render.ts";
-import { pollPanel, type PollReport } from "../poll/poll.ts";
+import type { Store, TrendSource } from "@trendjack/core/contracts/ports.ts";
+import type { Panel, Platform } from "@trendjack/core/contracts/types.ts";
+import { buildDigest } from "@trendjack/core/digest/build.ts";
+import { renderDigest } from "@trendjack/core/digest/render.ts";
+import { pollPanel, type PollReport } from "@trendjack/core/poll/poll.ts";
 
 export interface RunOnceOptions {
   panel: Panel;

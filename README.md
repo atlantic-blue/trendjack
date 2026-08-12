@@ -42,13 +42,27 @@ npm run format:check
 
 ## Layout
 
+A monorepo, on npm workspaces. There is no build step: the source runs through type stripping,
+in a terminal and inside the container alike.
+
 ```
-src/contracts   the ports and the domain types, depended on by everything else
-src/ranking     the heuristic, pure functions, no input or output
-src/store       the append only observation history
-src/sources     one adapter per data source, behind the TrendSource port
-src/digest      what a human reads in the morning
+packages/core   the domain, and the only thing the apps share
+  contracts     the ports and the domain types
+  ranking       the heuristic, pure functions, no input or output
+  store         the append only observation history
+  sources       one adapter per data source, behind the TrendSource port
+  panel         the list of creators we watch
+  poll          one round of the panel
+  digest        what a person reads in the morning
+  discover      deciding whether a creator is worth watching
+
+apps/poller     the daily run, as a Lambda container image
+apps/cli        the trendjack command
+apps/web        the page that shows the digest
+infra           the Terraform
 ```
+
+Run everything from the root: `npm run typecheck`, `npm test`, `npm run format:check`.
 
 ## What is not in this repository
 

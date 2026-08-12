@@ -1,8 +1,8 @@
-import type { Store, TrendSource } from "../contracts/ports.ts";
-import type { Panel, Platform } from "../contracts/types.ts";
-import { buildDigest } from "../digest/build.ts";
-import { toDigestJson, type DigestJson } from "../digest/json.ts";
-import { pollPanel, type PollReport } from "../poll/poll.ts";
+import type { Store, TrendSource } from "@trendjack/core/contracts/ports.ts";
+import type { Panel, Platform } from "@trendjack/core/contracts/types.ts";
+import { buildDigest } from "@trendjack/core/digest/build.ts";
+import { toDigestJson, type DigestJson } from "@trendjack/core/digest/json.ts";
+import { pollPanel, type PollReport } from "@trendjack/core/poll/poll.ts";
 
 /** Writes the file the front end reads, then clears it from the cache. */
 export interface DigestPublisher {

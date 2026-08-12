@@ -1,0 +1,14 @@
+{
+  "name": "@trendjack/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@trendjack/core": "*",
+    "@aws-sdk/client-dynamodb": "^3.1108.0"
+  }
+}

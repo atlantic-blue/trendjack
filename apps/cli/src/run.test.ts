@@ -6,7 +6,18 @@ import { fileURLToPath } from "node:url";
 import { parseQualify, runCli } from "./run.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const samplePath = path.join(here, "..", "panel", "fixtures", "panel-sample.json");
+const samplePath = path.join(
+  here,
+  "..",
+  "..",
+  "..",
+  "packages",
+  "core",
+  "src",
+  "panel",
+  "fixtures",
+  "panel-sample.json",
+);
 
 test("no command prints usage and fails, so a bare invocation is never mistaken for success", async () => {
   const result = await runCli([], {});

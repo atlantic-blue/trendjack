@@ -1,6 +1,6 @@
 import { CloudFrontClient, CreateInvalidationCommand } from "@aws-sdk/client-cloudfront";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import type { DigestJson } from "../digest/json.ts";
+import type { DigestJson } from "@trendjack/core/digest/json.ts";
 import type { DigestPublisher } from "./poll-once.ts";
 
 export const DIGEST_KEY = "digest.json";

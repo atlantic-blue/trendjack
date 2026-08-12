@@ -3,17 +3,17 @@ import {
   panelPathFromEnvironment,
   PanelInvalidError,
   PanelNotFoundError,
-} from "../panel/load.ts";
-import { renderReport, reportOn } from "../panel/report.ts";
-import type { Platform } from "../contracts/types.ts";
-import type { TrendSource } from "../contracts/ports.ts";
-import { YtDlpTikTokSource } from "../sources/tiktok.ts";
-import { ytDlpRunner } from "../sources/ytdlp.ts";
+} from "@trendjack/core/panel/load.ts";
+import { renderReport, reportOn } from "@trendjack/core/panel/report.ts";
+import type { Platform } from "@trendjack/core/contracts/types.ts";
+import type { TrendSource } from "@trendjack/core/contracts/ports.ts";
+import { YtDlpTikTokSource } from "@trendjack/core/sources/tiktok.ts";
+import { ytDlpRunner } from "@trendjack/core/sources/ytdlp.ts";
 import { runOnce } from "./run-once.ts";
-import { normaliseHandle } from "../panel/normalise.ts";
+import { normaliseHandle } from "@trendjack/core/panel/normalise.ts";
 import { storeFor } from "./store-for.ts";
-import { qualifyCreator, type Verdict } from "../discover/qualify.ts";
-import { renderQualify } from "../discover/report.ts";
+import { qualifyCreator, type Verdict } from "@trendjack/core/discover/qualify.ts";
+import { renderQualify } from "@trendjack/core/discover/report.ts";
 
 export interface CliResult {
   exitCode: number;

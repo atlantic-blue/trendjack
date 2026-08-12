@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DIGEST_FORMAT_VERSION, type DigestJson } from "../digest/json.ts";
+import { DIGEST_FORMAT_VERSION, type DigestJson } from "@trendjack/core/digest/json.ts";
 import { DIGEST_KEY, S3DigestPublisher } from "./s3-publisher.ts";
 
 const json: DigestJson = {

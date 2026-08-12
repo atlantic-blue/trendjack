@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { storeFor } from "./store-for.ts";
-import { InMemoryStore } from "../store/memory.ts";
-import { DynamoStore } from "../store/dynamo.ts";
+import { InMemoryStore } from "@trendjack/core/store/memory.ts";
+import { DynamoStore } from "@trendjack/core/store/dynamo.ts";
 
 test("with no table configured the run keeps nothing, and says so out loud", () => {
   const chosen = storeFor({});
