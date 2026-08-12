@@ -1,42 +1,36 @@
 # Infrastructure
 
-One DynamoDB table. That is the whole footprint.
+One DynamoDB table, one private bucket, one CloudFront distribution, one registry and one
+Lambda. That is the whole footprint.
 
-## Why there is no Lambda here
+## What runs where
 
-The poller runs as a scheduled GitHub Actions job rather than as a Lambda, and that is a
-deliberate choice rather than a shortcut.
+The poller is a Lambda on a container image, because it runs yt-dlp. EventBridge invokes it once
+a day. It writes `digest.json` into the site bucket and clears that one path from the cache.
 
-Polling needs `yt-dlp`, which is a Python program, so a Lambda would mean a container image, a
-registry, and a build pipeline to keep the image current with a tool that has to be updated
-often to keep working at all. A scheduled workflow installs it in one line.
+The page is static files in the same bucket. CloudFront serves both, so the page reads the
+digest from its own address and needs no API.
 
-The open question either way is whether TikTok answers a request from a data centre address at
-all. It is far more aggressive with those than with home connections, and I have not verified
-it. Running the schedule in Actions answers that question for the price of a workflow file
-instead of the price of an image pipeline. If it turns out to be blocked, the options are a
-residential proxy, a paid data provider whose whole business is solving exactly this, or running
-the poll from a machine on a home connection and writing to the same table. Nothing above the
-`TrendSource` port changes in any of those cases.
-
-## The one time bootstrap, which needs an administrator
-
-The deploy workflow assumes an OIDC role. That role cannot create itself, because it needs
-permissions before it can grant itself any, so the first apply has to be done by somebody with
-administrator credentials. Until that exists the deploy workflow is manual only, so nothing on
-`main` goes red waiting for it.
-
-What is needed:
-
-1. An IAM OIDC provider for `token.actions.githubusercontent.com` in the Atlantic Blue account,
-   if one is not there already.
-2. A role, `trendjack-deploy`, trusted by this repository on `main` only, with permission to
-   manage the table and read and write the Terraform state bucket.
-3. A state bucket, or a reuse of an existing one, wired into a backend block here.
-
-Then set `AWS_DEPLOY_ROLE_ARN` as a repository variable and the deploy workflow can be switched
-from manual to running on merge.
+Everything is cached for a day, which is how often the data changes.
 
 ## Applying
 
-Never from a laptop. `terraform plan` and `validate` locally are fine; the apply runs in CI.
+Never from a laptop. The deploy job assumes `trendjack-deploy` through GitHub OIDC and applies
+on merge to `main`.
+
+The one exception is `bootstrap/`, and it has to be: the deploy role cannot create itself,
+because it needs permissions before it can grant itself any. An administrator applies that once:
+
+```
+terraform -chdir=infra/bootstrap init
+terraform -chdir=infra/bootstrap apply
+```
+
+It creates the state bucket and the role, and reuses the account's existing GitHub OIDC
+provider. Its own state stays local; nothing depends on it after the first apply and the two
+resources can be imported again if it is lost.
+
+## The panel
+
+The panel is the curation worth having, so it is not in this repository. It lives in the
+`TRENDJACK_PANEL_JSON` repository secret and the deploy passes it to the function as a setting.
