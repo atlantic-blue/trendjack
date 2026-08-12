@@ -1,7 +1,7 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import type { Store } from "../contracts/ports.ts";
-import { DynamoStore } from "../store/dynamo.ts";
-import { InMemoryStore } from "../store/memory.ts";
+import type { Store } from "@trendjack/core/contracts/ports.ts";
+import { DynamoStore } from "@trendjack/core/store/dynamo.ts";
+import { InMemoryStore } from "@trendjack/core/store/memory.ts";
 
 export interface StoreChoice {
   store: Store;

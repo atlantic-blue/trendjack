@@ -13,23 +13,20 @@
   "engines": {
     "node": ">=22.6"
   },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test \"src/**/*.test.ts\"",
+    "test": "npm run test --workspaces --if-present",
+    "test:integration": "npm run test:integration --workspace @trendjack/core",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "test:integration": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test \"src/**/*.integration.ts\""
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "prettier": "^3.4.0",
     "typescript": "^5.7.0"
-  },
-  "dependencies": {
-    "@aws-sdk/client-cloudfront": "^3.1108.0",
-    "@aws-sdk/client-dynamodb": "^3.1108.0",
-    "@aws-sdk/client-s3": "^3.1108.0",
-    "@aws-sdk/lib-dynamodb": "^3.1108.0",
-    "zod": "^4.4.3"
   }
 }

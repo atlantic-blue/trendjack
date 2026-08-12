@@ -23,21 +23,28 @@ jobs:
       - run: npm run typecheck
       - run: npm run format:check
       - name: Test
-        # The runner reports success when it finds no test files, so the count is checked
-        # rather than the exit status alone. Node writes the summary marker as "# pass" on
-        # 22 and as an information glyph on 24, so both spellings are accepted and the
-        # colour escapes are stripped before matching.
+        # The runner reports success when it finds no test files, so the counts are checked
+        # rather than the exit status alone. There is one summary per workspace, so every
+        # workspace must report and the total must be plausible. Node writes the marker as
+        # "# pass" on 22 and as an information glyph on 24, so both are accepted and the colour
+        # escapes are stripped before matching.
         run: |
           set -o pipefail
           npm test 2>&1 | tee test-output.txt
           status=$?
           if [ "$status" -ne 0 ]; then exit "$status"; fi
-          pass=$(sed 's/\x1b\[[0-9;]*m//g' test-output.txt | grep -E '^(#|.) pass [0-9]+$' | awk '{print $3}' | tail -1)
-          if [ -z "$pass" ] || [ "$pass" -eq 0 ]; then
-            echo "No tests ran, or the summary line could not be read. Either is a failure, not a pass."
+          counts=$(sed 's/\x1b\[[0-9;]*m//g' test-output.txt | grep -E '^(#|.) pass [0-9]+$' | awk '{print $3}')
+          workspaces=$(echo "$counts" | grep -c . || true)
+          total=$(echo "$counts" | awk '{sum += $1} END {print sum + 0}')
+          echo "$workspaces workspaces reported, $total tests passed."
+          if [ "$workspaces" -lt 3 ]; then
+            echo "Expected a summary from every workspace. A missing one means its tests never ran."
             exit 1
           fi
-          echo "$pass tests passed."
+          if [ "$total" -lt 200 ]; then
+            echo "Only $total tests ran, which is fewer than this repository has. Something was skipped."
+            exit 1
+          fi
 
   integration:
     name: Store conformance against a real DynamoDB
@@ -79,7 +86,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build
-        run: docker build -t trendjack-poller .
+        # From the repository root, because this workspace depends on another one.
+        run: docker build -f apps/poller/Dockerfile -t trendjack-poller .
       - name: Prove yt-dlp is in the image and runs
         # A build that succeeded proves the layers ran, not that the binary works. The wrong
         # architecture downloads happily and then fails with an exec error at run time.
@@ -96,6 +104,6 @@ jobs:
           set -o pipefail
           docker run --rm --entrypoint node trendjack-poller \
             --experimental-strip-types --disable-warning=ExperimentalWarning \
-            -e "import('/var/task/src/lambda/handler.ts').then(async m => { try { await m.handler(); console.log('STARTED WITHOUT SETTINGS'); } catch (e) { console.log(e.name); } })" \
+            -e "import('/var/task/apps/poller/src/handler.ts').then(async m => { try { await m.handler(); console.log('STARTED WITHOUT SETTINGS'); } catch (e) { console.log(e.name); } })" \
             | tee load.txt
           grep -q MissingSettingError load.txt

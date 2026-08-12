@@ -1,12 +1,12 @@
 import { CloudFrontClient } from "@aws-sdk/client-cloudfront";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { S3Client } from "@aws-sdk/client-s3";
-import { panelSchema, type Panel, type Platform } from "../contracts/types.ts";
-import type { TrendSource } from "../contracts/ports.ts";
-import { YtDlpTikTokSource } from "../sources/tiktok.ts";
-import { ytDlpRunner } from "../sources/ytdlp.ts";
-import { DynamoStore } from "../store/dynamo.ts";
-import { normaliseEntry } from "../panel/normalise.ts";
+import { panelSchema, type Panel, type Platform } from "@trendjack/core/contracts/types.ts";
+import type { TrendSource } from "@trendjack/core/contracts/ports.ts";
+import { YtDlpTikTokSource } from "@trendjack/core/sources/tiktok.ts";
+import { ytDlpRunner } from "@trendjack/core/sources/ytdlp.ts";
+import { DynamoStore } from "@trendjack/core/store/dynamo.ts";
+import { normaliseEntry } from "@trendjack/core/panel/normalise.ts";
 import { pollOnce } from "./poll-once.ts";
 import { S3DigestPublisher } from "./s3-publisher.ts";
 

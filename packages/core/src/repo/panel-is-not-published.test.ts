@@ -4,7 +4,7 @@ import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
 /**
  * The panel is the list of creators, hashtags and sounds we watch. Publishing it hands over
@@ -29,7 +29,7 @@ test("a panel file named after a product is ignored", () => {
 });
 
 test("an invented sample panel under a fixtures directory is committable", () => {
-  assert.equal(isIgnored("src/sources/fixtures/panel-sample.json"), false);
+  assert.equal(isIgnored("packages/core/src/panel/fixtures/panel-sample.json"), false);
 });
 
 test("a file holding a key is ignored", () => {
@@ -38,5 +38,5 @@ test("a file holding a key is ignored", () => {
 });
 
 test("ordinary source is not ignored", () => {
-  assert.equal(isIgnored("src/ranking/score.ts"), false);
+  assert.equal(isIgnored("packages/core/src/ranking/score.ts"), false);
 });
