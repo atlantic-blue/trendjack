@@ -3,7 +3,7 @@ import os from "node:os";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
-import { runCli } from "./run.ts";
+import { parseQualify, runCli } from "./run.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const samplePath = path.join(here, "..", "panel", "fixtures", "panel-sample.json");
@@ -54,4 +54,30 @@ test("run without a panel fails with the reason rather than a stack trace", asyn
   const result = await runCli(["run"], { TRENDJACK_PANEL: missing });
   assert.equal(result.exitCode, 1);
   assert.match(result.output, /No panel at/);
+});
+
+test("qualify reads the product and niche, and keeps the handles", () => {
+  const parsed = parseQualify(["--product", "macgleam", "--niche", "laptop tips", "@Alice", "bob"]);
+  assert.equal(parsed.product, "macgleam");
+  assert.equal(parsed.niche, "laptop tips");
+  assert.deepEqual(parsed.handles, ["alice", "bob"]);
+});
+
+test("qualify strips an at sign and a url, so one creator cannot become two", () => {
+  const parsed = parseQualify(["@Alice", "https://www.tiktok.com/@alice", "alice"]);
+  assert.deepEqual(parsed.handles, ["alice"]);
+});
+
+test("qualify without a product says unassigned rather than guessing", () => {
+  assert.equal(parseQualify(["alice"]).product, "unassigned");
+});
+
+test("qualify with no creators named fails rather than reporting nothing to do", async () => {
+  const result = await runCli(["qualify"], {});
+  assert.equal(result.exitCode, 1);
+  assert.match(result.output, /Name at least one creator/);
+});
+
+test("the usage names the qualify command", async () => {
+  assert.match((await runCli(["--help"], {})).output, /qualify {2}check creators/);
 });
