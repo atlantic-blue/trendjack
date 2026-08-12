@@ -25,18 +25,13 @@ test("dots and dashes inside a handle survive, because they are part of it", () 
 });
 
 const entry: PanelEntry = {
-  product: "MacGleam",
-  niche: "Mac Tips",
   platform: "tiktok",
   kind: "creator",
   handle: "@SomeCreator",
 };
 
-test("an entry normalises its product, niche and handle together", () => {
-  const normalised = normaliseEntry(entry);
-  assert.equal(normalised.product, "macgleam");
-  assert.equal(normalised.niche, "mac tips");
-  assert.equal(normalised.handle, "somecreator");
+test("an entry normalises its handle", () => {
+  assert.equal(normaliseEntry(entry).handle, "somecreator");
 });
 
 test("the same creator written three ways produces one watch key", () => {

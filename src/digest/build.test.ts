@@ -7,9 +7,7 @@ import { buildDigest } from "./build.ts";
 
 const NOW = 1_754_000_000_000;
 
-const panel: Panel = [
-  { product: "macgleam", niche: "mac tips", platform: "tiktok", kind: "creator", handle: "alice" },
-];
+const panel: Panel = [{ platform: "tiktok", kind: "creator", handle: "alice" }];
 
 interface Seed {
   creator: string;
@@ -83,19 +81,12 @@ test("a breakout inside the window becomes a candidate", async () => {
   assert.ok((digest.candidates[0]?.score.features.outlier ?? 0) > 8);
 });
 
-test("a candidate carries the product whose niche its creator was watched for", async () => {
-  const store = new InMemoryStore();
-  await seed(store, { creator: "alice", postId: "hot", ageHours: 6, views: [2_000, 6_000, 9_000] });
-  const digest = await build(store);
-  assert.equal(digest.candidates[0]?.product, "macgleam");
-  assert.equal(digest.candidates[0]?.niche, "mac tips");
-});
-
-test("a creator not in the panel is scored but not attributed to a product", async () => {
+test("a creator outside the panel is scored the same as one inside it", async () => {
   const store = new InMemoryStore();
   await seed(store, { creator: "zoe", postId: "hot", ageHours: 6, views: [2_000, 6_000, 9_000] });
   const digest = await build(store);
-  assert.equal(digest.candidates[0]?.product, undefined);
+  assert.equal(digest.candidates.length, 1);
+  assert.equal(digest.candidates[0]?.post.creatorId, "zoe");
 });
 
 test("the window keeps a fresh post and drops one that has aged out", async () => {

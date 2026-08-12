@@ -7,8 +7,6 @@ import { rank, scorePost, type ScoreOutcome } from "../ranking/score.ts";
 export interface DigestRow {
   post: Post;
   score: Score;
-  product?: string;
-  niche?: string;
 }
 
 /**
@@ -19,8 +17,6 @@ export interface DigestRow {
 export interface ProvenRow {
   post: Post;
   likes: number;
-  product?: string;
-  niche?: string;
 }
 
 export interface Digest {
@@ -72,16 +68,15 @@ export async function buildDigest(options: BuildOptions): Promise<Digest> {
 
   const { ranked, suppressed } = rank(outcomes);
   const byPost = new Map(posts.map((post) => [post.postId as string, post]));
-  const attribution = attributionFrom(options.panel);
 
   return {
     generatedAt: options.now,
     windowHours: options.windowHours,
     postsConsidered: posts.length,
     creatorsSeen: new Set(posts.map((post) => post.creatorId)).size,
-    candidates: ranked.slice(0, options.limit).map((each) => row(each, byPost, attribution)),
-    proven: provenFrom(gathered, attribution, options.provenLikes ?? PROVEN_LIKES, options.limit),
-    heldBack: suppressed.map((each) => row(each, byPost, attribution)),
+    candidates: ranked.slice(0, options.limit).map((each) => row(each, byPost)),
+    proven: provenFrom(gathered, options.provenLikes ?? PROVEN_LIKES, options.limit),
+    heldBack: suppressed.map((each) => row(each, byPost)),
     unscored: outcomes
       .filter((each) => !each.scored)
       .map((each) => ({ postId: each.postId, reason: each.reason })),
@@ -167,28 +162,10 @@ function countOthers(bySound: Map<string, Set<string>>, each: Gathered): number 
   return [...creators].filter((creator) => creator !== each.post.creatorId).length;
 }
 
-function attributionFrom(panel: Panel): Map<string, { product: string; niche: string }> {
-  const byCreator = new Map<string, { product: string; niche: string }>();
-  for (const entry of panel) {
-    if (entry.kind !== "creator" || byCreator.has(entry.handle)) continue;
-    byCreator.set(entry.handle, { product: entry.product, niche: entry.niche });
-  }
-  return byCreator;
-}
-
-function row(
-  score: Score,
-  byPost: Map<string, Post>,
-  attribution: Map<string, { product: string; niche: string }>,
-): DigestRow {
+function row(score: Score, byPost: Map<string, Post>): DigestRow {
   const post = byPost.get(score.postId);
   if (!post) throw new Error(`Scored ${score.postId} but the post is not in the window`);
-  const belongsTo = attribution.get(post.creatorId);
-  return {
-    post,
-    score,
-    ...(belongsTo ? { product: belongsTo.product, niche: belongsTo.niche } : {}),
-  };
+  return { post, score };
 }
 
 /**
@@ -198,18 +175,12 @@ function row(
  * the time, so the score for one of them sits near their normal and the ranking would drop it.
  * The two lists answer different questions: the candidates grow now, these worked at scale.
  */
-function provenFrom(
-  gathered: Gathered[],
-  attribution: Map<string, { product: string; niche: string }>,
-  floor: number,
-  limit: number,
-): ProvenRow[] {
+function provenFrom(gathered: Gathered[], floor: number, limit: number): ProvenRow[] {
   const rows: ProvenRow[] = [];
   for (const each of gathered) {
     const likes = mostLikes(each.observations);
     if (likes === undefined || likes < floor) continue;
-    const belongsTo = attribution.get(each.post.creatorId);
-    rows.push({ post: each.post, likes, ...(belongsTo ? belongsTo : {}) });
+    rows.push({ post: each.post, likes });
   }
   return rows.sort((left, right) => right.likes - left.likes).slice(0, limit);
 }

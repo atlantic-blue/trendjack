@@ -2,8 +2,6 @@ import type { Verdict } from "./qualify.ts";
 
 export interface QualifyReport {
   verdicts: Verdict[];
-  product: string;
-  niche: string;
   platform: "tiktok" | "instagram";
 }
 
@@ -33,8 +31,6 @@ export function renderQualify(report: QualifyReport): string {
 
 function entriesFor(report: QualifyReport, kept: Verdict[]) {
   return kept.map((verdict) => ({
-    product: report.product,
-    niche: report.niche,
     platform: report.platform,
     kind: "creator",
     handle: verdict.handle,

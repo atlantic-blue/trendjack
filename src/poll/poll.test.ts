@@ -7,8 +7,8 @@ import { PollFailedError, pollPanel } from "./poll.ts";
 
 const NOW = 1_754_000_000_000;
 
-function creator(handle: string, platform: Platform = "tiktok", product = "macgleam"): PanelEntry {
-  return { product, niche: "mac tips", platform, kind: "creator", handle };
+function creator(handle: string, platform: Platform = "tiktok"): PanelEntry {
+  return { platform, kind: "creator", handle };
 }
 
 function sightingFor(handle: string, index: number): Sighting {
@@ -67,7 +67,7 @@ test("a round stores a post and an observation for everything it saw", async () 
 test("the same creator watched for two products is polled once", async () => {
   const source = new FakeSource("tiktok", twoPosts);
   const report = await pollPanel({
-    panel: [creator("alice", "tiktok", "macgleam"), creator("alice", "tiktok", "appshot")],
+    panel: [creator("alice"), creator("alice")],
     sources: sourcesOf(source),
     store: new InMemoryStore(),
     postsPerCreator: 10,
@@ -96,8 +96,8 @@ test("hashtags and sounds are counted as skipped, not quietly ignored", async ()
   const report = await pollPanel({
     panel: [
       creator("alice"),
-      { product: "macgleam", niche: "mac tips", platform: "tiktok", kind: "hashtag", handle: "m" },
-      { product: "macgleam", niche: "mac tips", platform: "tiktok", kind: "sound", handle: "s" },
+      { platform: "tiktok", kind: "hashtag", handle: "m" },
+      { platform: "tiktok", kind: "sound", handle: "s" },
     ],
     sources: sourcesOf(new FakeSource("tiktok", twoPosts)),
     store: new InMemoryStore(),

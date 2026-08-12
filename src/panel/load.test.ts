@@ -99,3 +99,38 @@ test("the default panel path is outside this repository", () => {
   const repoRoot = path.resolve(here, "..", "..");
   assert.ok(!DEFAULT_PANEL_PATH.startsWith(repoRoot));
 });
+
+test("a panel still grouped by product is refused, and the message says what changed", () => {
+  const panelPath = writeTemporaryPanel(
+    JSON.stringify([
+      { product: "macgleam", niche: "mac tips", platform: "tiktok", kind: "creator", handle: "a" },
+      { product: "appshot", niche: "launches", platform: "tiktok", kind: "creator", handle: "b" },
+    ]),
+  );
+  assert.throws(
+    () => loadPanel(panelPath),
+    (error: unknown) => {
+      assert.ok(error instanceof PanelInvalidError);
+      assert.match(error.message, /2 entries still carry "product" or "niche"/);
+      assert.match(error.message, /one flat list of the best creators/);
+      return true;
+    },
+  );
+});
+
+test("an entry carrying only a niche is caught too", () => {
+  const panelPath = writeTemporaryPanel(
+    JSON.stringify([{ niche: "mac tips", platform: "tiktok", kind: "creator", handle: "a" }]),
+  );
+  assert.throws(
+    () => loadPanel(panelPath),
+    (error: unknown) => error instanceof PanelInvalidError && /still carry/.test(error.message),
+  );
+});
+
+test("a flat panel loads without complaint", () => {
+  const panelPath = writeTemporaryPanel(
+    JSON.stringify([{ platform: "tiktok", kind: "creator", handle: "a" }]),
+  );
+  assert.equal(loadPanel(panelPath).entries.length, 1);
+});

@@ -33,7 +33,7 @@ const USAGE = [
   "  run      poll the panel once and print the digest",
   "  qualify  check creators against the panel criteria, then print entries to paste",
   "",
-  "  trendjack qualify --product macgleam --niche 'laptop tips' handle1 handle2",
+  "  trendjack qualify handle1 handle2",
   "",
   "The panel itself lives outside this repository. Point TRENDJACK_PANEL at it.",
 ].join("\n");
@@ -53,10 +53,7 @@ function panelCommand(environment: NodeJS.ProcessEnv): CliResult {
   const panelPath = panelPathFromEnvironment(environment);
   try {
     const report = reportOn(loadPanel(panelPath));
-    const hasProblems =
-      report.thinNiches.length > 0 ||
-      report.productsWithoutCreators.length > 0 ||
-      report.duplicatesDropped.length > 0;
+    const hasProblems = report.tooFewCreators || report.duplicatesDropped.length > 0;
     return { exitCode: hasProblems ? 2 : 0, output: renderReport(report) };
   } catch (error) {
     if (error instanceof PanelNotFoundError || error instanceof PanelInvalidError) {
@@ -105,7 +102,9 @@ const QUALIFY_POSTS = 30;
  * the handles come from somewhere else and this decides which of them are worth watching.
  */
 async function qualifyCommand(argv: string[]): Promise<CliResult> {
-  const { product, niche, handles } = parseQualify(argv);
+  const parsed = parseQualify(argv);
+  if (parsed.error) return { exitCode: 1, output: parsed.error };
+  const handles = parsed.handles;
   if (handles.length === 0) {
     return { exitCode: 1, output: "Name at least one creator to check." };
   }
@@ -117,7 +116,7 @@ async function qualifyCommand(argv: string[]): Promise<CliResult> {
   const kept = verdicts.filter((each) => each.keep).length;
   return {
     exitCode: kept === 0 ? 2 : 0,
-    output: renderQualify({ verdicts, product, niche, platform: "tiktok" }),
+    output: renderQualify({ verdicts, platform: "tiktok" }),
   };
 }
 
@@ -138,25 +137,27 @@ async function verdictFor(source: YtDlpTikTokSource, handle: string): Promise<Ve
   }
 }
 
-export function parseQualify(argv: string[]): {
-  product: string;
-  niche: string;
-  handles: string[];
-} {
-  let product = "unassigned";
-  let niche = "unassigned";
+/**
+ * The panel used to be grouped by product, and this command took `--product` and `--niche`.
+ * Both are gone. They are refused by name rather than read as a creator, because
+ * `--product macgleam` would otherwise become two creators called "product" and "macgleam" and
+ * the run would look like it worked.
+ */
+export function parseQualify(argv: string[]): { handles: string[]; error?: string } {
   const handles: string[] = [];
-  for (let index = 0; index < argv.length; index += 1) {
-    const argument = argv[index] ?? "";
-    if (argument === "--product") {
-      product = argv[index + 1] ?? product;
-      index += 1;
-    } else if (argument === "--niche") {
-      niche = argv[index + 1] ?? niche;
-      index += 1;
-    } else {
-      handles.push(normaliseHandle(argument));
+  for (const argument of argv) {
+    if (argument === "--product" || argument === "--niche") {
+      return {
+        handles: [],
+        error:
+          `"${argument}" is gone. The panel is now one flat list of the best creators, so a ` +
+          `creator does not belong to a product. Name the creators only.`,
+      };
     }
+    if (argument.startsWith("--")) {
+      return { handles: [], error: `Unknown option "${argument}".` };
+    }
+    handles.push(normaliseHandle(argument));
   }
-  return { product, niche, handles: [...new Set(handles.filter((each) => each.length > 0))] };
+  return { handles: [...new Set(handles.filter((each) => each.length > 0))] };
 }

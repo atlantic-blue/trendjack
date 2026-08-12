@@ -1,51 +1,9 @@
 [
-  {
-    "product": "macgleam",
-    "niche": "mac tips",
-    "platform": "tiktok",
-    "kind": "creator",
-    "handle": "@InventedMacTips"
-  },
-  {
-    "product": "macgleam",
-    "niche": "mac tips",
-    "platform": "tiktok",
-    "kind": "creator",
-    "handle": "https://www.tiktok.com/@invented.second"
-  },
-  {
-    "product": "macgleam",
-    "niche": "mac tips",
-    "platform": "tiktok",
-    "kind": "creator",
-    "handle": "invented_third"
-  },
-  {
-    "product": "macgleam",
-    "niche": "mac tips",
-    "platform": "tiktok",
-    "kind": "creator",
-    "handle": "InventedMacTips"
-  },
-  {
-    "product": "macgleam",
-    "niche": "mac tips",
-    "platform": "tiktok",
-    "kind": "hashtag",
-    "handle": "#mactips"
-  },
-  {
-    "product": "appshot-generator",
-    "niche": "indie app launch",
-    "platform": "instagram",
-    "kind": "creator",
-    "handle": "invented_indie_dev"
-  },
-  {
-    "product": "appshot-generator",
-    "niche": "indie app launch",
-    "platform": "instagram",
-    "kind": "sound",
-    "handle": "1234567890"
-  }
+  { "platform": "tiktok", "kind": "creator", "handle": "@InventedMacTips" },
+  { "platform": "tiktok", "kind": "creator", "handle": "https://www.tiktok.com/@invented.second" },
+  { "platform": "tiktok", "kind": "creator", "handle": "invented_third" },
+  { "platform": "tiktok", "kind": "creator", "handle": "InventedMacTips" },
+  { "platform": "tiktok", "kind": "hashtag", "handle": "#mactips" },
+  { "platform": "instagram", "kind": "creator", "handle": "invented_indie_dev" },
+  { "platform": "instagram", "kind": "sound", "handle": "1234567890" }
 ]

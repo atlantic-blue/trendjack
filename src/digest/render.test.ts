@@ -38,8 +38,6 @@ function row(overrides: Partial<Features> = {}, extra: Partial<DigestRow> = {}):
       hashtags: [],
     },
     score,
-    product: "macgleam",
-    niche: "mac tips",
     ...extra,
   };
 }
@@ -114,13 +112,10 @@ test("weak engagement is flagged even on a big outlier", () => {
   assert.match(rendered, /engagement below this creator's normal/);
 });
 
-test("the product a candidate was found for is named", () => {
-  assert.match(renderDigest(digestOf()), /macgleam \/ mac tips/);
-});
-
-test("a candidate from outside the panel says so rather than showing an empty slot", () => {
-  const { product: _product, niche: _niche, ...orphan } = row();
-  assert.match(renderDigest(digestOf({ candidates: [orphan] })), /not attributed to a product/);
+test("a candidate shows nothing about a product, because that decision comes later", () => {
+  const rendered = renderDigest(digestOf());
+  assert.doesNotMatch(rendered, /macgleam/);
+  assert.doesNotMatch(rendered, /not attributed/);
 });
 
 test("a quiet day says nothing cleared the bar rather than printing an empty list", () => {
@@ -164,13 +159,11 @@ test("formats that worked at scale get their own section, with the like count", 
         hashtags: [],
       },
       likes: 250_000,
-      product: "macgleam",
-      niche: "laptop tips",
     },
   ];
   const rendered = renderDigest(digestOf({ proven }));
   assert.match(rendered, /Formats that worked at scale \(1 video\):/);
-  assert.match(rendered, /250,000 likes {2}@somecreator {2}macgleam \/ laptop tips/);
+  assert.match(rendered, /250,000 likes {2}@somecreator/);
 });
 
 test("with nothing above the floor the section is left out entirely", () => {
