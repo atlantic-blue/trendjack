@@ -104,12 +104,24 @@ jobs:
             [0-9]*) ;;
             *) echo "yt-dlp did not report a version"; exit 1 ;;
           esac
-      - name: Prove the handler loads
-        # It must refuse to start without its settings rather than fail half way through a run.
+      - name: Prove the runtime can find and run the handler
+        # Through the Lambda runtime itself, not by importing the file with node. The runtime
+        # resolves a handler by file extension and will not find a TypeScript file, which an
+        # import in a test does not notice. It is invoked for real and must come back refusing
+        # to start without its settings, which proves the module loaded and ran.
         run: |
           set -o pipefail
-          docker run --rm --entrypoint node trendjack-poller \
-            --experimental-strip-types --disable-warning=ExperimentalWarning \
-            -e "import('/var/task/apps/poller/src/handler.ts').then(async m => { try { await m.handler(); console.log('STARTED WITHOUT SETTINGS'); } catch (e) { console.log(e.name); } })" \
-            | tee load.txt
-          grep -q MissingSettingError load.txt
+          docker run -d --name poller -p 9000:8080 trendjack-poller
+          for attempt in $(seq 1 30); do
+            curl -s -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" \
+              -d '{}' -o invoke.json && break
+            sleep 1
+          done
+          docker logs poller || true
+          docker rm -f poller > /dev/null
+          cat invoke.json
+          if grep -q "Cannot find module" invoke.json; then
+            echo "The runtime could not load the handler."
+            exit 1
+          fi
+          grep -q MissingSettingError invoke.json

@@ -42,4 +42,5 @@ COPY apps/poller/src ${LAMBDA_TASK_ROOT}/apps/poller/src
 # fall out of step with the source.
 ENV NODE_OPTIONS="--experimental-strip-types --disable-warning=ExperimentalWarning"
 
-CMD ["apps/poller/src/handler.handler"]
+# index.mjs, not handler.ts: the runtime looks for JavaScript by extension.
+CMD ["apps/poller/src/index.handler"]
