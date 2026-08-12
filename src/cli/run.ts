@@ -7,10 +7,10 @@ import {
 import { renderReport, reportOn } from "../panel/report.ts";
 import type { Platform } from "../contracts/types.ts";
 import type { TrendSource } from "../contracts/ports.ts";
-import { InMemoryStore } from "../store/memory.ts";
 import { YtDlpTikTokSource } from "../sources/tiktok.ts";
 import { ytDlpRunner } from "../sources/ytdlp.ts";
 import { runOnce } from "./run-once.ts";
+import { storeFor } from "./store-for.ts";
 
 export interface CliResult {
   exitCode: number;
@@ -71,17 +71,18 @@ async function runCommand(environment: NodeJS.ProcessEnv): Promise<CliResult> {
     const sources = new Map<Platform, TrendSource>([
       ["tiktok", new YtDlpTikTokSource(ytDlpRunner())],
     ]);
+    const chosen = storeFor(environment);
     const { poll, text } = await runOnce({
       panel,
       sources,
-      store: new InMemoryStore(),
+      store: chosen.store,
       now: Date.now(),
       postsPerCreator: POSTS_PER_CREATOR,
       windowHours: WINDOW_HOURS,
       limit: CANDIDATES,
       pace: () => new Promise((resolve) => setTimeout(resolve, PACE_MS)),
     });
-    return { exitCode: poll.failures.length > 0 ? 2 : 0, output: text };
+    return { exitCode: poll.failures.length > 0 ? 2 : 0, output: `${text}\n${chosen.note}` };
   } catch (error) {
     if (error instanceof PanelNotFoundError || error instanceof PanelInvalidError) {
       return { exitCode: 1, output: error.message };
