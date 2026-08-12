@@ -18,11 +18,12 @@
     "apps/*"
   ],
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && npm run typecheck --workspace @trendjack/web",
     "test": "npm run test --workspaces --if-present",
     "test:integration": "npm run test:integration --workspace @trendjack/core",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "build": "npm run build --workspace @trendjack/web"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
