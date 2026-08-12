@@ -52,6 +52,7 @@ export function App() {
         </span>
       </header>
 
+      <p className="stamp">Digest for</p>
       <h2 className="today">
         {new Date(digest.generatedAt).toLocaleDateString("en-GB", {
           weekday: "long",
@@ -62,14 +63,17 @@ export function App() {
 
       <p className="summary">
         <strong>{digest.candidates.length}</strong> worth a look, from{" "}
-        <strong>{digest.postsConsidered}</strong> videos by <strong>{digest.creatorsSeen}</strong>{" "}
-        creators in the last {digest.windowHours} hours.
+        <strong>{digest.postsConsidered}</strong> videos posted in the last {digest.windowHours}{" "}
+        hours by <strong>{digest.creatorsSeen}</strong> creators.
       </p>
 
       <section>
         <div className="section-head">
           <h2>Worth a look</h2>
-          <p>Beating their own creator's normal, and still growing.</p>
+          <p>
+            Posted in the last {digest.windowHours} hours. Beating their own creator's normal, and
+            still growing.
+          </p>
         </div>
         {digest.candidates.length === 0 ? (
           <p className="empty">Nothing cleared the bar today.</p>
@@ -97,7 +101,10 @@ export function App() {
       <section>
         <div className="section-head">
           <h2>Worked at scale</h2>
-          <p>Formats that reached a lot of people, whatever their creator's normal is.</p>
+          <p>
+            Posted in the last {Math.round(digest.provenWindowHours / 24)} days. Reached a lot of
+            people, whatever their creator's normal is.
+          </p>
         </div>
         {digest.proven.length === 0 ? (
           <p className="empty">Nothing reached the like floor today.</p>
@@ -112,6 +119,7 @@ export function App() {
                 caption={proven.caption}
                 thumbnail={proven.thumbnail}
                 likes={proven.likes}
+                ageHours={proven.ageHours}
               />
             ))}
           </div>

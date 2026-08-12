@@ -30,6 +30,8 @@ export interface DigestProven {
   url: string;
   creator: string;
   likes: number;
+  postedAt: number;
+  ageHours: number;
   caption?: string;
   thumbnail?: string;
 }
@@ -38,6 +40,7 @@ export interface DigestJson {
   version: number;
   generatedAt: number;
   windowHours: number;
+  provenWindowHours: number;
   postsConsidered: number;
   creatorsSeen: number;
   candidates: DigestCandidate[];
