@@ -1,0 +1,106 @@
+import type { Digest } from "./build.ts";
+
+/**
+ * The file the front end reads. It is a contract between two things that deploy separately, so
+ * it carries a version. A front end that does not know the version it is given must say so
+ * rather than draw a page from fields it guessed at.
+ */
+export const DIGEST_FORMAT_VERSION = 1;
+
+export interface DigestJsonCandidate {
+  postId: string;
+  url: string;
+  creator: string;
+  platform: string;
+  postedAt: number;
+  ageHours: number;
+  outlier: number;
+  band: string;
+  trendScore: number;
+  normVelocity: number;
+  velocityMeasurable: boolean;
+  acceleration: number;
+  spread: number;
+  saturation: number;
+  qualityRatio: number;
+}
+
+export interface DigestJsonProven {
+  postId: string;
+  url: string;
+  creator: string;
+  likes: number;
+}
+
+export interface DigestJson {
+  version: number;
+  generatedAt: number;
+  windowHours: number;
+  postsConsidered: number;
+  creatorsSeen: number;
+  candidates: DigestJsonCandidate[];
+  proven: DigestJsonProven[];
+  heldBack: { count: number; reasons: { reason: string; count: number }[] };
+  unscored: { count: number; reasons: { reason: string; count: number }[] };
+}
+
+/**
+ * Flattens the digest into the file.
+ *
+ * The counts of what was held back travel with it, because a page showing three videos on a day
+ * when forty were held back is a different thing from a quiet day, and the two must not look
+ * alike on a screen either.
+ */
+export function toDigestJson(digest: Digest): DigestJson {
+  return {
+    version: DIGEST_FORMAT_VERSION,
+    generatedAt: digest.generatedAt,
+    windowHours: digest.windowHours,
+    postsConsidered: digest.postsConsidered,
+    creatorsSeen: digest.creatorsSeen,
+    candidates: digest.candidates.map((row) => ({
+      postId: row.post.postId,
+      url: row.post.url,
+      creator: row.post.creatorId,
+      platform: row.post.platform,
+      postedAt: row.post.postedAt,
+      ageHours: round(row.score.features.ageHours),
+      outlier: round(row.score.features.outlier),
+      band: row.score.band,
+      trendScore: round(row.score.trendScore),
+      normVelocity: round(row.score.features.normVelocity),
+      velocityMeasurable: row.score.features.velocityMeasurable,
+      acceleration: round(row.score.features.acceleration),
+      spread: row.score.features.spread,
+      saturation: round(row.score.features.saturation),
+      qualityRatio: round(row.score.features.qualityRatio),
+    })),
+    proven: digest.proven.map((row) => ({
+      postId: row.post.postId,
+      url: row.post.url,
+      creator: row.post.creatorId,
+      likes: row.likes,
+    })),
+    heldBack: {
+      count: digest.heldBack.length,
+      reasons: countReasons(digest.heldBack.map((row) => row.score.suppressedReason ?? "unknown")),
+    },
+    unscored: {
+      count: digest.unscored.length,
+      reasons: countReasons(digest.unscored.map((each) => each.reason)),
+    },
+  };
+}
+
+function countReasons(reasons: string[]): { reason: string; count: number }[] {
+  const counted = new Map<string, number>();
+  for (const reason of reasons) counted.set(reason, (counted.get(reason) ?? 0) + 1);
+  return [...counted]
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((left, right) => right.count - left.count);
+}
+
+/** Two decimal places, because a screen does not need seventeen. */
+function round(value: number): number {
+  return Math.round(value * 100) / 100;
+}
