@@ -102,6 +102,11 @@ export const featuresSchema = z
   .object({
     outlier: z.number().nonnegative(),
     normVelocity: z.number(),
+    /**
+     * False when every earlier reading sits inside the platform's rounding, so no rate can be
+     * read. Distinct from a velocity of nought, which means the video genuinely stopped.
+     */
+    velocityMeasurable: z.boolean(),
     acceleration: z.number(),
     qualityRatio: z.number().positive(),
     spread: countSchema,

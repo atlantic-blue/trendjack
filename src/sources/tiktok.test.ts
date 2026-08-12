@@ -4,7 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { EmptySourceResultError, SourceContractError } from "../contracts/ports.ts";
-import { YtDlpTikTokSource, countResolution, hashtagsIn, soundKeyOf } from "./tiktok.ts";
+import { YtDlpTikTokSource, hashtagsIn, soundKeyOf } from "./tiktok.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -142,11 +142,4 @@ test("a sound key is built from the artist and the track, because there is no mu
 test("a record with no sound has no sound key rather than an empty one", () => {
   assert.equal(soundKeyOf(null, null), undefined);
   assert.equal(soundKeyOf("  ", []), undefined);
-});
-
-test("the resolution of a reading says how coarsely the tool reported it", () => {
-  assert.equal(countResolution(1_100_000), 1_000);
-  assert.equal(countResolution(235_400), 100);
-  assert.equal(countResolution(5_554), 1);
-  assert.equal(countResolution(0), 1);
 });

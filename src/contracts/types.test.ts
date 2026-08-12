@@ -83,6 +83,7 @@ test("an observation with a fractional view count is rejected", () => {
 const validFeatures = {
   outlier: 4.2,
   normVelocity: 0.31,
+  velocityMeasurable: true,
   acceleration: -0.02,
   qualityRatio: 1.4,
   spread: 3,
@@ -100,6 +101,16 @@ test("saturation outside nought to one is rejected", () => {
 
 test("a quality ratio of zero is rejected, since a ratio is never zero", () => {
   assert.throws(() => featuresSchema.parse({ ...validFeatures, qualityRatio: 0 }));
+});
+
+test("a rate that could not be read is expressible, and is not the same as a rate of nought", () => {
+  const unreadable = featuresSchema.parse({
+    ...validFeatures,
+    normVelocity: 0,
+    velocityMeasurable: false,
+  });
+  assert.equal(unreadable.velocityMeasurable, false);
+  assert.throws(() => featuresSchema.parse({ ...validFeatures, velocityMeasurable: undefined }));
 });
 
 test("a score carries the features that produced it, so it can be replayed", () => {

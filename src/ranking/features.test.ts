@@ -140,3 +140,53 @@ test("a post whose clock is ahead of ours is nought hours old, never negative", 
   });
   assert.equal(features.ageHours, 0);
 });
+
+test("a big video reported at the same rounded number twice is not called flat", () => {
+  const features = featuresFor(
+    [
+      makeObservation({ observedAt: NOW - 8 * HOUR_MS, views: 1_100_000 }),
+      makeObservation({ observedAt: NOW, views: 1_100_000 }),
+    ],
+    { baseline: baselineOf(100_000) },
+  );
+  assert.equal(features.velocityMeasurable, false);
+  assert.equal(features.normVelocity, 0);
+});
+
+test("a big video whose rounded number moved does have a rate", () => {
+  const features = featuresFor(
+    [
+      makeObservation({ observedAt: NOW - 8 * HOUR_MS, views: 1_100_000 }),
+      makeObservation({ observedAt: NOW, views: 1_900_000 }),
+    ],
+    { baseline: baselineOf(100_000) },
+  );
+  assert.equal(features.velocityMeasurable, true);
+  assert.equal(features.normVelocity, 1);
+});
+
+test("the rate is measured back to the last reading that actually moved, not the last reading", () => {
+  const features = featuresFor(
+    [
+      makeObservation({ observedAt: NOW - 8 * HOUR_MS, views: 1_100_000 }),
+      makeObservation({ observedAt: NOW - 4 * HOUR_MS, views: 1_900_000 }),
+      makeObservation({ observedAt: NOW, views: 1_900_000 }),
+    ],
+    { baseline: baselineOf(100_000) },
+  );
+  assert.equal(features.velocityMeasurable, true);
+  assert.equal(features.normVelocity, 1);
+});
+
+test("a small video is compared exactly, so a hundred extra views is a real rate", () => {
+  const features = featuresFor([
+    makeObservation({ observedAt: NOW - 2 * HOUR_MS, views: 1_000 }),
+    makeObservation({ observedAt: NOW, views: 1_100 }),
+  ]);
+  assert.equal(features.velocityMeasurable, true);
+  assert.ok(features.normVelocity > 0);
+});
+
+test("a post seen only once has no rate to read", () => {
+  assert.equal(featuresFor([makeObservation()]).velocityMeasurable, false);
+});

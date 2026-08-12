@@ -192,6 +192,7 @@ function score(postId: string, computedAt: number, trendScore: number) {
     features: {
       outlier: 3,
       normVelocity: 0.2,
+      velocityMeasurable: true,
       acceleration: 0.1,
       qualityRatio: 1.1,
       spread: 2,
