@@ -37,6 +37,13 @@ export const ACTION_WINDOW_HOURS = 72;
 /** Once this many watched creators are already on a sound, we are late to it. */
 export const SATURATION_CREATORS = 8;
 
+/**
+ * A video that gets this many likes has shown its format can reach a lot of people. This is an
+ * absolute count, not a comparison with the creator's own normal, and it answers a different
+ * question: the outlier score says a video grows now, this says a format works at scale.
+ */
+export const PROVEN_LIKES = 100_000;
+
 /** Bands are for reading, not for scoring. */
 export const BAND_THRESHOLDS = [
   { band: "monster", atLeast: 20 },

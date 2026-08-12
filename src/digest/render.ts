@@ -1,4 +1,4 @@
-import type { Digest, DigestRow } from "./build.ts";
+import type { Digest, DigestRow, ProvenRow } from "./build.ts";
 
 /**
  * What a person reads over coffee. Everything here is chosen so a decision can be made without
@@ -11,6 +11,7 @@ export function renderDigest(digest: Digest): string {
     lines.push("  nothing cleared the bar today");
   }
   digest.candidates.forEach((row, index) => lines.push(...candidate(row, index + 1)));
+  lines.push(...provenSection(digest.proven));
   lines.push("", ...footer(digest));
   return lines.join("\n");
 }
@@ -85,4 +86,19 @@ function plural(amount: number, singular: string): string {
 
 function stamp(at: number): string {
   return new Date(at).toISOString().replace("T", " ").slice(0, 16);
+}
+
+/**
+ * Videos that reached the like floor. These are a separate list because they answer a different
+ * question from the candidates: not "is this growing" but "does this shape work at scale".
+ */
+function provenSection(proven: ProvenRow[]): string[] {
+  if (proven.length === 0) return [];
+  const lines = ["", `Formats that worked at scale (${plural(proven.length, "video")}):`, ""];
+  for (const row of proven) {
+    const where = row.product ? `${row.product} / ${row.niche}` : "not attributed to a product";
+    lines.push(`   ${row.likes.toLocaleString("en-GB")} likes  @${row.post.creatorId}  ${where}`);
+    lines.push(`   ${row.post.url}`, "");
+  }
+  return lines;
 }

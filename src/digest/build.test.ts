@@ -16,6 +16,7 @@ interface Seed {
   postId: string;
   ageHours: number;
   views: number[];
+  likes?: (number | undefined)[];
   soundId?: string;
   settledViews?: number;
 }
@@ -57,11 +58,12 @@ async function seed(store: InMemoryStore, options: Seed): Promise<void> {
     ...(options.soundId ? { soundId: options.soundId as SoundId } : {}),
   });
   for (const [index, views] of options.views.entries()) {
+    const likes = options.likes ? options.likes[index] : Math.round(views * 0.05);
     await store.appendObservation({
       postId,
       observedAt: NOW - (options.views.length - 1 - index) * 2 * HOUR_MS,
       views,
-      likes: Math.round(views * 0.05),
+      ...(likes === undefined ? {} : { likes }),
       comments: Math.round(views * 0.002),
       shares: Math.round(views * 0.001),
     });
@@ -223,4 +225,102 @@ test("an empty store gives an empty digest rather than failing", async () => {
   const digest = await build(new InMemoryStore());
   assert.equal(digest.postsConsidered, 0);
   assert.deepEqual(digest.candidates, []);
+});
+
+test("a video that cleared the like floor is listed as a format that worked at scale", async () => {
+  const store = new InMemoryStore();
+  await seed(store, {
+    creator: "alice",
+    postId: "big",
+    ageHours: 6,
+    views: [3_000_000, 4_000_000],
+    likes: [90_000, 250_000],
+  });
+  const digest = await build(store);
+  assert.equal(digest.proven.length, 1);
+  assert.equal(digest.proven[0]?.post.postId, "big");
+  assert.equal(digest.proven[0]?.likes, 250_000);
+});
+
+test("a video below the floor is not listed", async () => {
+  const store = new InMemoryStore();
+  await seed(store, {
+    creator: "alice",
+    postId: "small",
+    ageHours: 6,
+    views: [3_000_000, 4_000_000],
+    likes: [1_000, 99_999],
+  });
+  assert.deepEqual((await build(store)).proven, []);
+});
+
+test("the floor uses the largest reading, because a later one can be missing the field", async () => {
+  const store = new InMemoryStore();
+  await seed(store, {
+    creator: "alice",
+    postId: "big",
+    ageHours: 6,
+    views: [3_000_000, 4_000_000],
+    likes: [250_000, undefined],
+  });
+  assert.equal((await build(store)).proven[0]?.likes, 250_000);
+});
+
+test("a proven video appears even when its own creator makes it look ordinary", async () => {
+  const store = new InMemoryStore();
+  await seed(store, {
+    creator: "alice",
+    postId: "routine",
+    ageHours: 6,
+    views: [3_000_000, 3_100_000],
+    likes: [200_000, 210_000],
+    settledViews: 3_000_000,
+  });
+  const digest = await build(store);
+  assert.equal(digest.proven.length, 1);
+  // Its own creator makes 3 million views normal, so the score says nothing special happened.
+  assert.ok((digest.candidates[0]?.score.features.outlier ?? 0) < 1.1);
+});
+
+test("proven videos are listed most liked first", async () => {
+  const store = new InMemoryStore();
+  await seed(store, {
+    creator: "alice",
+    postId: "a",
+    ageHours: 6,
+    views: [9_000_000],
+    likes: [150_000],
+  });
+  await seed(store, {
+    creator: "bob",
+    postId: "b",
+    ageHours: 5,
+    views: [9_000_000],
+    likes: [900_000],
+  });
+  const digest = await build(store);
+  assert.deepEqual(
+    digest.proven.map((row) => row.post.postId),
+    ["b", "a"],
+  );
+});
+
+test("the floor can be lowered for a niche where nothing reaches a hundred thousand", async () => {
+  const store = new InMemoryStore();
+  await seed(store, {
+    creator: "alice",
+    postId: "modest",
+    ageHours: 6,
+    views: [50_000],
+    likes: [4_000],
+  });
+  const digest = await buildDigest({
+    store,
+    panel,
+    now: NOW,
+    windowHours: 72,
+    limit: 10,
+    provenLikes: 3_000,
+  });
+  assert.equal(digest.proven.length, 1);
 });
