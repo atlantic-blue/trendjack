@@ -65,6 +65,7 @@ export function scorePost(input: ScoreInput): ScoreOutcome {
   const confidence = confidenceFor({
     settledPostCount: outcome.baseline.settledPostCount,
     readings,
+    velocityMeasurable: features.velocityMeasurable,
     flatBaseline: outcome.flat,
     baselineAgeMs: context.now - outcome.baseline.newestSettledPostAt,
   });
@@ -85,10 +86,12 @@ export function scorePost(input: ScoreInput): ScoreOutcome {
 function confidenceFor(input: {
   settledPostCount: number;
   readings: number;
+  velocityMeasurable: boolean;
   flatBaseline: boolean;
   baselineAgeMs: number;
 }): Confidence {
   if (input.readings < 2) return "low";
+  if (!input.velocityMeasurable) return "low";
   if (input.flatBaseline) return "low";
   if (input.settledPostCount < CONFIDENT_SETTLED_POSTS) return "medium";
   if (input.baselineAgeMs > STALE_BASELINE_MS) return "medium";
@@ -97,7 +100,7 @@ function confidenceFor(input: {
 
 function whyNotHigh(confidence: Confidence): string {
   return confidence === "low"
-    ? "seen only once, or the creator's posts are too uniform to show a breakout"
+    ? "no rate could be read: seen once, reported too roundly to see movement, or the creator's posts are too uniform"
     : "the baseline is thin or the creator has not posted recently";
 }
 

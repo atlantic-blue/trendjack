@@ -10,6 +10,7 @@ const settled = makeSettled(20);
 const neutral: Features = {
   outlier: 1,
   normVelocity: 0,
+  velocityMeasurable: true,
   acceleration: 0,
   qualityRatio: 1,
   spread: 0,
@@ -106,7 +107,7 @@ test("a post seen once is low confidence, because it has no velocity yet", () =>
   const outcome = score([makeObservation()]);
   assert.ok(outcome.scored);
   assert.equal(outcome.score.confidence, "low");
-  assert.match(outcome.score.suppressedReason ?? "", /seen only once/);
+  assert.match(outcome.score.suppressedReason ?? "", /no rate could be read/);
 });
 
 test("a creator whose posts are all identical is low confidence however big the outlier", () => {

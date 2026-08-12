@@ -10,17 +10,6 @@ import type { CreatorId, PostId, Post, SoundId } from "../contracts/types.ts";
 /** Runs the tool and returns its standard output. Injected so tests never touch the network. */
 export type CommandRunner = (args: string[]) => Promise<string>;
 
-/**
- * yt-dlp reports counts to about four significant figures, so a large number arrives rounded:
- * 1,100,000 rather than 1,138,204. Two polls of a big video can therefore read identically
- * while it is still climbing hard. The resolution travels with the reading so that later
- * arithmetic can tell "did not move" apart from "moved less than we can see".
- */
-export function countResolution(value: number): number {
-  if (value <= 0) return 1;
-  return Math.max(1, 10 ** (Math.floor(Math.log10(value)) - 3));
-}
-
 const recordSchema = z.object({
   id: z.string().min(1),
   uploader: z.string().min(1),
