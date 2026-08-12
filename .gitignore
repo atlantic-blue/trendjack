@@ -22,3 +22,9 @@ digest.txt
 
 # The web app is built, never committed.
 apps/web/dist/
+
+# Terraform state and lock files never go in.
+infra/**/.terraform/
+infra/**/.terraform.lock.hcl
+infra/**/*.tfstate
+infra/**/*.tfstate.*

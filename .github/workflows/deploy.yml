@@ -1,0 +1,81 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: trendjack-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build, apply and publish
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::230345688874:role/trendjack-deploy
+          aws-region: eu-west-1
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      # The repository has to exist before an image can be pushed to it, and the function needs
+      # the image before it can be created. So the registry is applied first, on its own.
+      - name: Make sure the registry exists
+        run: |
+          terraform -chdir=infra init -input=false
+          terraform -chdir=infra apply -input=false -auto-approve \
+            -target=aws_ecr_repository.poller \
+            -var="panel_json=${PANEL}" \
+            -var="image_uri=placeholder"
+        env:
+          PANEL: ${{ secrets.TRENDJACK_PANEL_JSON }}
+
+      - name: Build and push the poller image
+        id: image
+        run: |
+          registry=$(terraform -chdir=infra output -raw ecr_repository_url)
+          aws ecr get-login-password --region eu-west-1 \
+            | docker login --username AWS --password-stdin "${registry%%/*}"
+          tag="${registry}:${GITHUB_SHA}"
+          docker build -f apps/poller/Dockerfile -t "$tag" .
+          docker push "$tag"
+          echo "uri=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Apply everything else
+        run: |
+          terraform -chdir=infra apply -input=false -auto-approve \
+            -var="panel_json=${PANEL}" \
+            -var="image_uri=${IMAGE}"
+        env:
+          PANEL: ${{ secrets.TRENDJACK_PANEL_JSON }}
+          IMAGE: ${{ steps.image.outputs.uri }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+      - name: Publish the page
+        # The sample digest never goes up: the function writes the real one, and copying the
+        # sample over it would put yesterday's demo in front of a reader.
+        run: |
+          bucket=$(terraform -chdir=infra output -raw site_bucket)
+          rm -f apps/web/dist/digest.json
+          aws s3 sync apps/web/dist "s3://${bucket}" --delete --exclude "digest.json"
+          distribution=$(terraform -chdir=infra output -raw distribution_id)
+          aws cloudfront create-invalidation --distribution-id "$distribution" --paths "/*" > /dev/null
+          echo "Deployed to $(terraform -chdir=infra output -raw site_url)" >> "$GITHUB_STEP_SUMMARY"
