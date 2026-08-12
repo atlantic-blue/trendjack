@@ -51,6 +51,7 @@ function digestOf(overrides: Partial<Digest> = {}): Digest {
     postsConsidered: 48,
     creatorsSeen: 12,
     candidates: [row()],
+    proven: [],
     heldBack: [],
     unscored: [],
     ...overrides,
@@ -149,4 +150,29 @@ test("the commonest reason nothing could be scored is surfaced", () => {
     }),
   );
   assert.match(rendered, /Not scored at all: 3 \(mostly: the creator has 3 settled posts\)/);
+});
+
+test("formats that worked at scale get their own section, with the like count", () => {
+  const proven = [
+    {
+      post: {
+        postId: "big" as PostId,
+        platform: "tiktok" as const,
+        creatorId: "somecreator" as CreatorId,
+        postedAt: NOW,
+        url: "https://www.tiktok.com/@somecreator/video/big",
+        hashtags: [],
+      },
+      likes: 250_000,
+      product: "macgleam",
+      niche: "laptop tips",
+    },
+  ];
+  const rendered = renderDigest(digestOf({ proven }));
+  assert.match(rendered, /Formats that worked at scale \(1 video\):/);
+  assert.match(rendered, /250,000 likes {2}@somecreator {2}macgleam \/ laptop tips/);
+});
+
+test("with nothing above the floor the section is left out entirely", () => {
+  assert.doesNotMatch(renderDigest(digestOf({ proven: [] })), /worked at scale/);
 });

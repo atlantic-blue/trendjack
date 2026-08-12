@@ -1,12 +1,24 @@
 import type { Store } from "../contracts/ports.ts";
 import type { Observation, Panel, Post, Score } from "../contracts/types.ts";
 import type { SettledPost } from "../ranking/baseline.ts";
-import { BASELINE_POSTS, HOUR_MS, SETTLED_AFTER_MS } from "../ranking/constants.ts";
+import { BASELINE_POSTS, HOUR_MS, PROVEN_LIKES, SETTLED_AFTER_MS } from "../ranking/constants.ts";
 import { rank, scorePost, type ScoreOutcome } from "../ranking/score.ts";
 
 export interface DigestRow {
   post: Post;
   score: Score;
+  product?: string;
+  niche?: string;
+}
+
+/**
+ * A video that cleared the like floor. It carries no score, because a large account posts these
+ * as a matter of course and the score would be near its normal. The point is the format, not
+ * the growth.
+ */
+export interface ProvenRow {
+  post: Post;
+  likes: number;
   product?: string;
   niche?: string;
 }
@@ -17,6 +29,7 @@ export interface Digest {
   postsConsidered: number;
   creatorsSeen: number;
   candidates: DigestRow[];
+  proven: ProvenRow[];
   heldBack: DigestRow[];
   unscored: { postId: string; reason: string }[];
 }
@@ -27,6 +40,8 @@ export interface BuildOptions {
   now: number;
   windowHours: number;
   limit: number;
+  /** Likes a video needs to count as a format that works at scale. */
+  provenLikes?: number;
 }
 
 /**
@@ -65,6 +80,7 @@ export async function buildDigest(options: BuildOptions): Promise<Digest> {
     postsConsidered: posts.length,
     creatorsSeen: new Set(posts.map((post) => post.creatorId)).size,
     candidates: ranked.slice(0, options.limit).map((each) => row(each, byPost, attribution)),
+    proven: provenFrom(gathered, attribution, options.provenLikes ?? PROVEN_LIKES, options.limit),
     heldBack: suppressed.map((each) => row(each, byPost, attribution)),
     unscored: outcomes
       .filter((each) => !each.scored)
@@ -173,4 +189,35 @@ function row(
     score,
     ...(belongsTo ? { product: belongsTo.product, niche: belongsTo.niche } : {}),
   };
+}
+
+/**
+ * Videos that reached the like floor, most liked first.
+ *
+ * This list does not use the score at all. A big account posts videos with this many likes all
+ * the time, so the score for one of them sits near their normal and the ranking would drop it.
+ * The two lists answer different questions: the candidates grow now, these worked at scale.
+ */
+function provenFrom(
+  gathered: Gathered[],
+  attribution: Map<string, { product: string; niche: string }>,
+  floor: number,
+  limit: number,
+): ProvenRow[] {
+  const rows: ProvenRow[] = [];
+  for (const each of gathered) {
+    const likes = mostLikes(each.observations);
+    if (likes === undefined || likes < floor) continue;
+    const belongsTo = attribution.get(each.post.creatorId);
+    rows.push({ post: each.post, likes, ...(belongsTo ? belongsTo : {}) });
+  }
+  return rows.sort((left, right) => right.likes - left.likes).slice(0, limit);
+}
+
+/** The largest like count seen, because a later reading can be missing the field. */
+function mostLikes(observations: Observation[]): number | undefined {
+  const counts = observations
+    .map((each) => each.likes)
+    .filter((each): each is number => each !== undefined);
+  return counts.length === 0 ? undefined : Math.max(...counts);
 }
