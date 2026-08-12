@@ -10,7 +10,10 @@ import type { TrendSource } from "../contracts/ports.ts";
 import { YtDlpTikTokSource } from "../sources/tiktok.ts";
 import { ytDlpRunner } from "../sources/ytdlp.ts";
 import { runOnce } from "./run-once.ts";
+import { normaliseHandle } from "../panel/normalise.ts";
 import { storeFor } from "./store-for.ts";
+import { qualifyCreator, type Verdict } from "../discover/qualify.ts";
+import { renderQualify } from "../discover/report.ts";
 
 export interface CliResult {
   exitCode: number;
@@ -28,6 +31,9 @@ const USAGE = [
   "",
   "  panel    show what is being watched, and what is wrong with it",
   "  run      poll the panel once and print the digest",
+  "  qualify  check creators against the panel criteria, then print entries to paste",
+  "",
+  "  trendjack qualify --product macgleam --niche 'laptop tips' handle1 handle2",
   "",
   "The panel itself lives outside this repository. Point TRENDJACK_PANEL at it.",
 ].join("\n");
@@ -39,6 +45,7 @@ export async function runCli(argv: string[], environment: NodeJS.ProcessEnv): Pr
   }
   if (command === "panel") return panelCommand(environment);
   if (command === "run") return runCommand(environment);
+  if (command === "qualify") return qualifyCommand(argv.slice(1));
   return { exitCode: 1, output: `Unknown command "${command}".\n\n${USAGE}` };
 }
 
@@ -89,4 +96,67 @@ async function runCommand(environment: NodeJS.ProcessEnv): Promise<CliResult> {
     }
     return { exitCode: 1, output: (error as Error).message };
   }
+}
+
+const QUALIFY_POSTS = 30;
+
+/**
+ * Checks named creators. It does not search: TikTok gates search behind a signed request, so
+ * the handles come from somewhere else and this decides which of them are worth watching.
+ */
+async function qualifyCommand(argv: string[]): Promise<CliResult> {
+  const { product, niche, handles } = parseQualify(argv);
+  if (handles.length === 0) {
+    return { exitCode: 1, output: "Name at least one creator to check." };
+  }
+  const source = new YtDlpTikTokSource(ytDlpRunner());
+  const verdicts: Verdict[] = [];
+  for (const handle of handles) {
+    verdicts.push(await verdictFor(source, handle));
+  }
+  const kept = verdicts.filter((each) => each.keep).length;
+  return {
+    exitCode: kept === 0 ? 2 : 0,
+    output: renderQualify({ verdicts, product, niche, platform: "tiktok" }),
+  };
+}
+
+async function verdictFor(source: YtDlpTikTokSource, handle: string): Promise<Verdict> {
+  try {
+    const sightings = await source.recentPostsByCreator(handle, QUALIFY_POSTS);
+    return qualifyCreator({ handle, sightings, now: Date.now() });
+  } catch (error) {
+    return {
+      handle,
+      keep: false,
+      reason: `could not be read: ${(error as Error).message}`,
+      posts: 0,
+      medianViews: 0,
+      bestLikes: 0,
+      lastPostedAt: 0,
+    };
+  }
+}
+
+export function parseQualify(argv: string[]): {
+  product: string;
+  niche: string;
+  handles: string[];
+} {
+  let product = "unassigned";
+  let niche = "unassigned";
+  const handles: string[] = [];
+  for (let index = 0; index < argv.length; index += 1) {
+    const argument = argv[index] ?? "";
+    if (argument === "--product") {
+      product = argv[index + 1] ?? product;
+      index += 1;
+    } else if (argument === "--niche") {
+      niche = argv[index + 1] ?? niche;
+      index += 1;
+    } else {
+      handles.push(normaliseHandle(argument));
+    }
+  }
+  return { product, niche, handles: [...new Set(handles.filter((each) => each.length > 0))] };
 }
