@@ -370,3 +370,27 @@ test("a format older than the proven window is not counted", async () => {
   });
   assert.deepEqual((await build(store)).proven, []);
 });
+
+test("one prolific creator cannot fill the proven list", async () => {
+  const store = new InMemoryStore();
+  for (const index of [0, 1, 2, 3]) {
+    await seed(store, {
+      creator: "loud",
+      postId: `loud-${index}`,
+      ageHours: 10 * 24 + index,
+      views: [9_000_000],
+      likes: [500_000 - index],
+    });
+  }
+  await seed(store, {
+    creator: "quiet",
+    postId: "quiet-1",
+    ageHours: 11 * 24,
+    views: [9_000_000],
+    likes: [120_000],
+  });
+  const digest = await build(store);
+  const byCreator = digest.proven.filter((row) => row.post.creatorId === "loud").length;
+  assert.equal(byCreator, 2);
+  assert.ok(digest.proven.some((row) => row.post.creatorId === "quiet"));
+});

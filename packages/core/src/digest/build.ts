@@ -6,6 +6,7 @@ import {
   CANDIDATE_OUTLIER,
   HOUR_MS,
   PROVEN_LIKES,
+  PROVEN_PER_CREATOR,
   PROVEN_WINDOW_HOURS,
   SETTLED_AFTER_MS,
 } from "../ranking/constants.ts";
@@ -196,7 +197,24 @@ async function provenFrom(options: BuildOptions, since: number): Promise<ProvenR
     if (likes === undefined || likes < floor) continue;
     rows.push({ post, likes });
   }
-  return rows.sort((left, right) => right.likes - left.likes).slice(0, options.limit);
+  return capPerCreator(
+    rows.sort((left, right) => right.likes - left.likes),
+    PROVEN_PER_CREATOR,
+  ).slice(0, options.limit);
+}
+
+/**
+ * One prolific account would otherwise fill the whole list. The point of the list is a range of
+ * formats, and twenty videos by the same person is one format twenty times.
+ */
+function capPerCreator(rows: ProvenRow[], most: number): ProvenRow[] {
+  const seen = new Map<string, number>();
+  return rows.filter((row) => {
+    const count = seen.get(row.post.creatorId) ?? 0;
+    if (count >= most) return false;
+    seen.set(row.post.creatorId, count + 1);
+    return true;
+  });
 }
 
 /** The largest like count seen, because a later reading can be missing the field. */

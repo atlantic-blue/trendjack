@@ -8,6 +8,9 @@ import type { Digest } from "./build.ts";
 export const DIGEST_FORMAT_VERSION = 1;
 
 export interface DigestJsonCandidate {
+  /** Filled in after the digest is built, by asking the platform how the video looks. */
+  thumbnail?: string;
+  caption?: string;
   postId: string;
   url: string;
   creator: string;
@@ -26,6 +29,8 @@ export interface DigestJsonCandidate {
 }
 
 export interface DigestJsonProven {
+  thumbnail?: string;
+  caption?: string;
   postId: string;
   url: string;
   creator: string;

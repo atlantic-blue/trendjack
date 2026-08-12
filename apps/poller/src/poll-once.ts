@@ -2,6 +2,7 @@ import type { Store, TrendSource } from "@trendjack/core/contracts/ports.ts";
 import type { Panel, Platform } from "@trendjack/core/contracts/types.ts";
 import { buildDigest } from "@trendjack/core/digest/build.ts";
 import { toDigestJson, type DigestJson } from "@trendjack/core/digest/json.ts";
+import { enrichDigest, type LookUp } from "@trendjack/core/digest/enrich.ts";
 import { pollPanel, type PollReport } from "@trendjack/core/poll/poll.ts";
 
 /** Writes the file the front end reads, then clears it from the cache. */
@@ -20,6 +21,8 @@ export interface PollOnceOptions {
   limit: number;
   provenLikes?: number;
   pace?: () => Promise<void>;
+  /** Asks the platform how each published video looks, for the poster and the caption. */
+  look?: LookUp;
 }
 
 export interface PollOnceResult {
@@ -51,7 +54,8 @@ export async function pollOnce(options: PollOnceOptions): Promise<PollOnceResult
     ...(options.provenLikes === undefined ? {} : { provenLikes: options.provenLikes }),
   });
 
-  const json = toDigestJson(digest);
+  const built = toDigestJson(digest);
+  const json = options.look ? await enrichDigest(built, options.look) : built;
   await options.publisher.publish(json);
   return { poll, json };
 }
