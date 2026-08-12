@@ -72,3 +72,30 @@ jobs:
             exit 1
           fi
           echo "$pass conformance tests passed against DynamoDB."
+
+  image:
+    name: The lambda image builds and yt-dlp runs in it
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: docker build -t trendjack-poller .
+      - name: Prove yt-dlp is in the image and runs
+        # A build that succeeded proves the layers ran, not that the binary works. The wrong
+        # architecture downloads happily and then fails with an exec error at run time.
+        run: |
+          version=$(docker run --rm --entrypoint /usr/local/bin/yt-dlp trendjack-poller --version)
+          echo "yt-dlp ${version}"
+          case "$version" in
+            [0-9]*) ;;
+            *) echo "yt-dlp did not report a version"; exit 1 ;;
+          esac
+      - name: Prove the handler loads
+        # It must refuse to start without its settings rather than fail half way through a run.
+        run: |
+          set -o pipefail
+          docker run --rm --entrypoint node trendjack-poller \
+            --experimental-strip-types --disable-warning=ExperimentalWarning \
+            -e "import('/var/task/src/lambda/handler.ts').then(async m => { try { await m.handler(); console.log('STARTED WITHOUT SETTINGS'); } catch (e) { console.log(e.name); } })" \
+            | tee load.txt
+          grep -q MissingSettingError load.txt
