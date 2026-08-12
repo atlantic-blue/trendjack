@@ -1,0 +1,83 @@
+/**
+ * The design tokens. Everything else uses these and never a raw value.
+ *
+ * The page is bright on purpose. It is read in the morning, quickly, and the videos are the
+ * content, so the surface stays out of their way. Colour carries one job only: how far above
+ * normal a video is. Everything else is ink on paper.
+ */
+:root {
+  /* Surface. Warm rather than blue, so thumbnails do not look cold against it. */
+  --paper: #fbfaf7;
+  --card: #ffffff;
+  --sunk: #f2f0ea;
+  --line: #e6e2d8;
+
+  /* Ink. */
+  --ink: #16150f;
+  --ink-soft: #57544a;
+  --ink-faint: #8a867a;
+
+  /* One accent, used for the number that matters and nothing else. */
+  --accent: #e8442a;
+  --accent-soft: #fdece8;
+
+  /* The three states a video can be in. */
+  --rising: #0f7a4a;
+  --rising-soft: #e4f4ec;
+  --falling: #9a5b00;
+  --falling-soft: #fbf0dc;
+
+  --radius-s: 8px;
+  --radius-m: 14px;
+  --radius-l: 22px;
+
+  /* An 8 point grid. */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 16px;
+  --s4: 24px;
+  --s5: 32px;
+  --s6: 48px;
+  --s7: 72px;
+
+  /* A modular scale, 1.25. */
+  --t-micro: 11px;
+  --t-small: 13px;
+  --t-body: 16px;
+  --t-lead: 20px;
+  --t-title: 30px;
+  --t-display: 48px;
+  --t-number: 40px;
+
+  --shadow-rest: 0 1px 2px rgb(22 21 15 / 6%), 0 6px 18px rgb(22 21 15 / 5%);
+  --shadow-lift: 0 2px 6px rgb(22 21 15 / 8%), 0 16px 36px rgb(22 21 15 / 10%);
+
+  --font:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-number: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+}
+
+/**
+ * A dark version exists because a browser set to dark should not flash white at somebody at
+ * seven in the morning. It is the same design with the ink and the paper swapped, not a
+ * different one.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #14130f;
+    --card: #1d1c17;
+    --sunk: #232219;
+    --line: #33322a;
+    --ink: #f7f5ef;
+    --ink-soft: #b7b3a6;
+    --ink-faint: #8b8778;
+    --accent: #ff7a5e;
+    --accent-soft: #3a201a;
+    --rising: #5fd39b;
+    --rising-soft: #17301f;
+    --falling: #e0a44a;
+    --falling-soft: #332616;
+    --shadow-rest: 0 1px 2px rgb(0 0 0 / 40%), 0 6px 18px rgb(0 0 0 / 30%);
+    --shadow-lift: 0 2px 6px rgb(0 0 0 / 45%), 0 16px 36px rgb(0 0 0 / 40%);
+  }
+}

@@ -22,6 +22,8 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run format:check
+      - name: The web app builds
+        run: npm run build
       - name: Test
         # The runner reports success when it finds no test files, so the counts are checked
         # rather than the exit status alone. There is one summary per workspace, so every
@@ -33,11 +35,15 @@ jobs:
           npm test 2>&1 | tee test-output.txt
           status=$?
           if [ "$status" -ne 0 ]; then exit "$status"; fi
-          counts=$(sed 's/\x1b\[[0-9;]*m//g' test-output.txt | grep -E '^(#|.) pass [0-9]+$' | awk '{print $3}')
-          workspaces=$(echo "$counts" | grep -c . || true)
-          total=$(echo "$counts" | awk '{sum += $1} END {print sum + 0}')
+          clean=$(sed 's/\x1b\[[0-9;]*m//g' test-output.txt)
+          # Three workspaces use the node runner, which prints "pass N". The web app uses
+          # vitest, which prints "Tests  N passed". Both are counted.
+          counts=$(echo "$clean" | grep -E '^(#|.) pass [0-9]+$' | awk '{print $3}')
+          vitest=$(echo "$clean" | grep -oE 'Tests +[0-9]+ passed' | awk '{print $2}')
+          workspaces=$(printf '%s\n%s\n' "$counts" "$vitest" | grep -c . || true)
+          total=$(printf '%s\n%s\n' "$counts" "$vitest" | awk '{sum += $1} END {print sum + 0}')
           echo "$workspaces workspaces reported, $total tests passed."
-          if [ "$workspaces" -lt 3 ]; then
+          if [ "$workspaces" -lt 4 ]; then
             echo "Expected a summary from every workspace. A missing one means its tests never ran."
             exit 1
           fi

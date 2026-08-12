@@ -19,3 +19,6 @@ panel.*.json
 *.tfstate
 *.tfstate.*
 digest.txt
+
+# The web app is built, never committed.
+apps/web/dist/
