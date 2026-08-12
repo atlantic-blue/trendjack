@@ -57,6 +57,9 @@ export const CANDIDATE_OUTLIER = 3;
  */
 export const PROVEN_WINDOW_HOURS = 30 * 24;
 
+/** At most this many videos from one creator, so the list shows a range of formats. */
+export const PROVEN_PER_CREATOR = 2;
+
 /** Bands are for reading, not for scoring. */
 export const BAND_THRESHOLDS = [
   { band: "monster", atLeast: 20 },

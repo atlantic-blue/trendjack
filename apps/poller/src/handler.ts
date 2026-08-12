@@ -7,6 +7,7 @@ import { YtDlpTikTokSource } from "@trendjack/core/sources/tiktok.ts";
 import { ytDlpRunner } from "@trendjack/core/sources/ytdlp.ts";
 import { DynamoStore } from "@trendjack/core/store/dynamo.ts";
 import { normaliseEntry } from "@trendjack/core/panel/normalise.ts";
+import { tikTokLookUp } from "@trendjack/core/digest/enrich.ts";
 import { pollOnce } from "./poll-once.ts";
 import { S3DigestPublisher } from "./s3-publisher.ts";
 
@@ -58,6 +59,7 @@ export async function handler(): Promise<{ watched: number; candidates: number }
     windowHours: WINDOW_HOURS,
     limit: CANDIDATES,
     pace: () => new Promise((resolve) => setTimeout(resolve, PACE_MS)),
+    look: tikTokLookUp(),
   });
 
   return { watched: poll.watched, candidates: json.candidates.length };
