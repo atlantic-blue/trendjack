@@ -38,3 +38,37 @@ jobs:
             exit 1
           fi
           echo "$pass tests passed."
+
+  integration:
+    name: Store conformance against a real DynamoDB
+    runs-on: ubuntu-latest
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local
+        ports:
+          - 8000:8000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Conformance
+        # The same suite the in memory store passes, against the real database. A fake that is
+        # looser than the real thing manufactures green, so both are held to one suite. The
+        # test file refuses to run without an endpoint rather than skipping, because a skipped
+        # test and a passing one are indistinguishable in a summary.
+        env:
+          TRENDJACK_DYNAMO_ENDPOINT: http://localhost:8000
+        run: |
+          set -o pipefail
+          npm run test:integration 2>&1 | tee integration-output.txt
+          status=$?
+          if [ "$status" -ne 0 ]; then exit "$status"; fi
+          pass=$(sed 's/\x1b\[[0-9;]*m//g' integration-output.txt | grep -E '^(#|.) pass [0-9]+$' | awk '{print $3}' | tail -1)
+          if [ -z "$pass" ] || [ "$pass" -lt 15 ]; then
+            echo "Expected the whole conformance suite to run. Saw '${pass:-nothing}'."
+            exit 1
+          fi
+          echo "$pass conformance tests passed against DynamoDB."

@@ -4,7 +4,7 @@ import { describeStoreConformance } from "./conformance.ts";
 import { InMemoryStore, ObservationConflictError } from "./memory.ts";
 import type { PostId } from "../contracts/types.ts";
 
-describeStoreConformance("the in memory store", () => new InMemoryStore());
+describeStoreConformance("the in memory store", async () => new InMemoryStore());
 
 test("the conflict carries the post and the moment, so a caller can say what disagreed", async () => {
   const store = new InMemoryStore();
