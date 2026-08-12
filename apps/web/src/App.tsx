@@ -31,7 +31,14 @@ export function App() {
     fetch(fileFor(range), { cache: "no-cache" })
       .then(async (response) => {
         if (!response.ok) throw new Error(`the digest could not be read (${response.status})`);
-        return (await response.json()) as DigestJson;
+        // A missing file does not answer 404 here. The distribution serves this page instead,
+        // with a 200, so a digest that was never written arrives as HTML and only the content
+        // gives it away.
+        const body = await response.text();
+        if (!body.trimStart().startsWith("{")) {
+          throw new Error("there is no digest for this range yet");
+        }
+        return JSON.parse(body) as DigestJson;
       })
       .then((digest) => {
         if (digest.version !== DIGEST_FORMAT_VERSION) {

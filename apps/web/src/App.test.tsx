@@ -149,3 +149,12 @@ test("a range in the address that we do not offer falls back rather than asking 
   render(<App />);
   await waitFor(() => expect(asked).toContain("digest-72h.json"));
 });
+
+test("a range whose file was never written says so, rather than showing a parse error", async () => {
+  // The distribution answers a missing file with the page itself and a 200.
+  vi.stubGlobal("fetch", async () => new Response("<!doctype html><html></html>", { status: 200 }));
+  render(<App />);
+  await waitFor(() =>
+    expect(screen.getByText(/there is no digest for this range yet/)).toBeTruthy(),
+  );
+});
