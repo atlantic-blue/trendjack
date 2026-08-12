@@ -27,7 +27,19 @@ starts later.
 
 ## Status
 
-Phase 1, detection, in progress. Nothing else is built.
+Phase 1, detection, is deployed and running. Nothing else is built.
+
+## Documentation
+
+Start at [docs/README.md](docs/README.md).
+
+- [docs/product.md](docs/product.md). What this is, why detection is the hard part, and the
+  platform rules that shape it.
+- [docs/architecture.md](docs/architecture.md). The parts, the ports, and the path a video takes.
+- [docs/heuristic.md](docs/heuristic.md). The scoring rules, as the code runs them today.
+- [docs/data-model.md](docs/data-model.md). The append only history.
+- [docs/operations.md](docs/operations.md). The daily run, the deploy, the gates and the known
+  gaps.
 
 ## Running it
 
