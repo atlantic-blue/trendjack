@@ -141,25 +141,28 @@ test("a score may explain why it was held back", () => {
   assert.match(parsed.suppressedReason ?? "", /settled posts/);
 });
 
-test("a panel entry names the product it is being watched for", () => {
+test("a panel entry is a platform, a kind and a handle, and nothing else", () => {
   const parsed = panelEntrySchema.parse({
-    product: "macgleam",
-    niche: "mac tips",
     platform: "tiktok",
     kind: "creator",
     handle: "somecreator",
   });
-  assert.equal(parsed.product, "macgleam");
+  assert.equal(parsed.handle, "somecreator");
+});
+
+test("a panel entry that still names a product is rejected", () => {
+  assert.throws(() =>
+    panelEntrySchema.parse({
+      product: "macgleam",
+      platform: "tiktok",
+      kind: "creator",
+      handle: "somecreator",
+    }),
+  );
 });
 
 test("a panel entry of an unknown kind is rejected", () => {
   assert.throws(() =>
-    panelEntrySchema.parse({
-      product: "macgleam",
-      niche: "mac tips",
-      platform: "tiktok",
-      kind: "playlist",
-      handle: "somecreator",
-    }),
+    panelEntrySchema.parse({ platform: "tiktok", kind: "playlist", handle: "somecreator" }),
   );
 });

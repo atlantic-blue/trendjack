@@ -24,12 +24,10 @@ function headline(digest: Digest): string {
 
 function candidate(row: DigestRow, rank: number): string[] {
   const { score, post } = row;
-  const where = row.product ? `${row.product} / ${row.niche}` : "not attributed to a product";
   return [
     `${rank}. ${score.features.outlier.toFixed(1)}x  ${score.band}  ${Math.round(score.features.ageHours)}h old  @${post.creatorId}`,
     `   ${movement(row)}`,
     `   ${post.url}`,
-    `   ${where}`,
     "",
   ];
 }
@@ -96,8 +94,7 @@ function provenSection(proven: ProvenRow[]): string[] {
   if (proven.length === 0) return [];
   const lines = ["", `Formats that worked at scale (${plural(proven.length, "video")}):`, ""];
   for (const row of proven) {
-    const where = row.product ? `${row.product} / ${row.niche}` : "not attributed to a product";
-    lines.push(`   ${row.likes.toLocaleString("en-GB")} likes  @${row.post.creatorId}  ${where}`);
+    lines.push(`   ${row.likes.toLocaleString("en-GB")} likes  @${row.post.creatorId}`);
     lines.push(`   ${row.post.url}`, "");
   }
   return lines;

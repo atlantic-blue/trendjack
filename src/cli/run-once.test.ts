@@ -8,9 +8,7 @@ import { runOnce } from "./run-once.ts";
 
 const NOW = 1_754_000_000_000;
 
-const panel: Panel = [
-  { product: "macgleam", niche: "mac tips", platform: "tiktok", kind: "creator", handle: "alice" },
-];
+const panel: Panel = [{ platform: "tiktok", kind: "creator", handle: "alice" }];
 
 /** A creator with a settled history and one fresh post that is beating it. */
 function sightings(handle: string, freshViews: number): Sighting[] {

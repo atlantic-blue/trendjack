@@ -60,7 +60,18 @@ export interface LoadedPanel {
 export function loadPanel(panelPath: string): LoadedPanel {
   if (!fs.existsSync(panelPath)) throw new PanelNotFoundError(panelPath);
 
-  const parsed = panelSchema.safeParse(readJson(panelPath));
+  const raw = readJson(panelPath);
+  const grouped = groupedEntriesIn(raw);
+  if (grouped > 0) {
+    throw new PanelInvalidError(
+      panelPath,
+      `${grouped} entries still carry "product" or "niche". The panel is now one flat list of ` +
+        `the best creators, so remove those two fields from every entry. The match to a ` +
+        `product happens later, once we have the video.`,
+    );
+  }
+
+  const parsed = panelSchema.safeParse(raw);
   if (!parsed.success) {
     throw new PanelInvalidError(panelPath, parsed.error.issues.map(describeIssue).join("; "));
   }
@@ -95,4 +106,17 @@ function readJson(panelPath: string): unknown {
 function describeIssue(issue: { path: PropertyKey[]; message: string }): string {
   const where = issue.path.length > 0 ? issue.path.join(".") : "the file";
   return `${where}: ${issue.message}`;
+}
+
+/**
+ * The panel used to be grouped by product. A file in the old shape would otherwise fail with a
+ * message about an unexpected field, which does not tell anybody what to do. This names the
+ * change instead.
+ */
+function groupedEntriesIn(raw: unknown): number {
+  if (!Array.isArray(raw)) return 0;
+  return raw.filter(
+    (entry) =>
+      typeof entry === "object" && entry !== null && ("product" in entry || "niche" in entry),
+  ).length;
 }

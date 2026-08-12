@@ -32,7 +32,7 @@ test("the panel command reports on the panel it was pointed at", async () => {
 test("a panel with problems exits non zero, so a scheduled run cannot ignore it", async () => {
   const result = await runCli(["panel"], { TRENDJACK_PANEL: samplePath });
   assert.equal(result.exitCode, 2);
-  assert.match(result.output, /fewer than the 5 a spread signal needs/);
+  assert.match(result.output, /fewer than the 20 the spread signal needs/);
 });
 
 test("a missing panel fails with the reason rather than a stack trace", async () => {
@@ -56,20 +56,34 @@ test("run without a panel fails with the reason rather than a stack trace", asyn
   assert.match(result.output, /No panel at/);
 });
 
-test("qualify reads the product and niche, and keeps the handles", () => {
-  const parsed = parseQualify(["--product", "macgleam", "--niche", "laptop tips", "@Alice", "bob"]);
-  assert.equal(parsed.product, "macgleam");
-  assert.equal(parsed.niche, "laptop tips");
-  assert.deepEqual(parsed.handles, ["alice", "bob"]);
+test("qualify keeps the handles it is given", () => {
+  assert.deepEqual(parseQualify(["@Alice", "bob"]).handles, ["alice", "bob"]);
+});
+
+test("the removed product option is refused by name, not read as a creator", () => {
+  const parsed = parseQualify(["--product", "macgleam", "alice"]);
+  assert.deepEqual(parsed.handles, []);
+  assert.match(parsed.error ?? "", /"--product" is gone/);
+  assert.match(parsed.error ?? "", /one flat list of the best creators/);
+});
+
+test("the removed niche option is refused too", () => {
+  assert.match(parseQualify(["--niche", "laptop tips"]).error ?? "", /"--niche" is gone/);
+});
+
+test("any other unknown option is refused rather than treated as a creator", () => {
+  assert.match(parseQualify(["--limit", "5"]).error ?? "", /Unknown option "--limit"/);
+});
+
+test("a refused option makes the command fail rather than check nothing", async () => {
+  const result = await runCli(["qualify", "--product", "macgleam", "alice"], {});
+  assert.equal(result.exitCode, 1);
+  assert.match(result.output, /is gone/);
 });
 
 test("qualify strips an at sign and a url, so one creator cannot become two", () => {
   const parsed = parseQualify(["@Alice", "https://www.tiktok.com/@alice", "alice"]);
   assert.deepEqual(parsed.handles, ["alice"]);
-});
-
-test("qualify without a product says unassigned rather than guessing", () => {
-  assert.equal(parseQualify(["alice"]).product, "unassigned");
 });
 
 test("qualify with no creators named fails rather than reporting nothing to do", async () => {

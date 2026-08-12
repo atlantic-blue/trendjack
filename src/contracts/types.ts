@@ -134,11 +134,13 @@ export type Score = z.infer<typeof scoreSchema>;
 /**
  * One thing we watch. The collection of these is the panel, and the panel is deliberately not
  * committed to this repository.
+ *
+ * The panel is one flat list of the best creators. It is not grouped by product. Grouping by
+ * product made the pool small and weak, because the product then decided which videos we could
+ * ever see. The match to a product happens later, once we have the video.
  */
 export const panelEntrySchema = z
   .object({
-    product: z.string().min(1),
-    niche: z.string().min(1),
     platform: platformSchema,
     kind: z.enum(["creator", "hashtag", "sound"]),
     handle: z.string().min(1),

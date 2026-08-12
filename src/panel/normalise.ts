@@ -14,12 +14,7 @@ export function normaliseHandle(raw: string): string {
 }
 
 export function normaliseEntry(entry: PanelEntry): PanelEntry {
-  return {
-    ...entry,
-    product: entry.product.trim().toLowerCase(),
-    niche: entry.niche.trim().toLowerCase(),
-    handle: normaliseHandle(entry.handle),
-  };
+  return { ...entry, handle: normaliseHandle(entry.handle) };
 }
 
 /** Two entries are the same watch if they point the same tool at the same thing. */
