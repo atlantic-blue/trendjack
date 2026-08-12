@@ -17,7 +17,9 @@ jobs:
   deploy:
     name: Build, apply and publish
     runs-on: ubuntu-latest
-    environment: production
+    # No GitHub environment on purpose. Naming one changes the subject in the token from
+    # "repo:owner/name:ref:refs/heads/main" to "repo:owner/name:environment:production", which
+    # no longer matches what the deploy role trusts, and the job cannot assume it.
     steps:
       - uses: actions/checkout@v4
 
