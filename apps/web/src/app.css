@@ -32,6 +32,42 @@ body {
   padding: var(--s5) var(--s3) var(--s7);
 }
 
+/* How far back to look. The whole page changes with it, so it sits above everything. */
+.ranges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1);
+  margin: var(--s4) 0 var(--s3);
+  padding: var(--s1);
+  background: var(--sunk);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.range {
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: var(--t-small);
+  font-weight: 700;
+  padding: var(--s2) var(--s3);
+  border-radius: 999px;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.range:hover {
+  color: var(--ink);
+}
+
+.range-on {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow-rest);
+}
+
 /* The header states the day and how much was looked at to produce it. */
 .masthead {
   display: flex;

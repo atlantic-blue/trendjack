@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { VideoCard } from "./VideoCard.tsx";
 import type { DigestJson } from "./digest.ts";
-import { movementOf, notesFor, DIGEST_FORMAT_VERSION } from "./digest.ts";
+import {
+  movementOf,
+  notesFor,
+  DIGEST_FORMAT_VERSION,
+  RANGES,
+  fileFor,
+  rangeFromLocation,
+} from "./digest.ts";
 
 type Load =
   | { state: "loading" }
@@ -10,9 +17,18 @@ type Load =
 
 export function App() {
   const [load, setLoad] = useState<Load>({ state: "loading" });
+  const [range, setRange] = useState(() => rangeFromLocation(window.location.search));
+
+  function choose(key: string) {
+    setRange(key);
+    setLoad({ state: "loading" });
+    const address = new URL(window.location.href);
+    address.searchParams.set("range", key);
+    window.history.replaceState(null, "", address);
+  }
 
   useEffect(() => {
-    fetch("digest.json", { cache: "no-cache" })
+    fetch(fileFor(range), { cache: "no-cache" })
       .then(async (response) => {
         if (!response.ok) throw new Error(`the digest could not be read (${response.status})`);
         return (await response.json()) as DigestJson;
@@ -26,13 +42,37 @@ export function App() {
         setLoad({ state: "ready", digest });
       })
       .catch((error: Error) => setLoad({ state: "failed", reason: error.message }));
-  }, []);
+  }, [range]);
 
-  if (load.state === "loading") return <main className="page">Reading today's digest…</main>;
+  const picker = (
+    <nav className="ranges" aria-label="How far back to look">
+      {RANGES.map((each) => (
+        <button
+          key={each.key}
+          type="button"
+          className={each.key === range ? "range range-on" : "range"}
+          aria-pressed={each.key === range}
+          onClick={() => choose(each.key)}
+        >
+          {each.label}
+        </button>
+      ))}
+    </nav>
+  );
+
+  if (load.state === "loading") {
+    return (
+      <main className="page">
+        {picker}
+        <p className="empty">Reading the digest…</p>
+      </main>
+    );
+  }
   if (load.state === "failed") {
     return (
       <main className="page">
-        <p className="empty">No digest today: {load.reason}</p>
+        {picker}
+        <p className="empty">No digest for this range: {load.reason}</p>
       </main>
     );
   }
@@ -60,6 +100,8 @@ export function App() {
           month: "long",
         })}
       </h2>
+
+      {picker}
 
       <p className="summary">
         <strong>{digest.candidates.length}</strong> worth a look, from{" "}

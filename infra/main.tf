@@ -237,9 +237,15 @@ data "aws_iam_policy_document" "poller" {
     resources = [aws_dynamodb_table.trendjack.arn, "${aws_dynamodb_table.trendjack.arn}/index/*"]
   }
 
+  # One digest per range, plus a kept copy of every poster. HeadObject is how the run avoids
+  # fetching a poster it already has.
   statement {
-    actions   = ["s3:PutObject"]
-    resources = ["${aws_s3_bucket.site.arn}/digest.json"]
+    actions = ["s3:PutObject", "s3:GetObject"]
+    resources = [
+      "${aws_s3_bucket.site.arn}/digest.json",
+      "${aws_s3_bucket.site.arn}/digest-*.json",
+      "${aws_s3_bucket.site.arn}/posters/*",
+    ]
   }
 
   statement {
