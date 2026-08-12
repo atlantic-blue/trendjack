@@ -8,8 +8,11 @@
  *   terraform -chdir=infra/bootstrap init
  *   terraform -chdir=infra/bootstrap apply
  *
- * The state for this one stays local. Nothing else depends on it after the first apply, and the
- * resources can be imported again if it is ever lost.
+ * The state for this one is local, so keep it. If it is lost, import the two resources back
+ * before applying again, or Terraform will try to create a bucket that is already there:
+ *
+ *   terraform -chdir=infra/bootstrap import aws_iam_role.deploy trendjack-deploy
+ *   terraform -chdir=infra/bootstrap import aws_s3_bucket.state trendjack-tfstate-230345688874
  */
 terraform {
   required_version = ">= 1.6"
@@ -88,10 +91,14 @@ data "aws_iam_policy_document" "trust" {
       variable = "token.actions.githubusercontent.com:aud"
       values   = ["sts.amazonaws.com"]
     }
+    # Any workflow in this repository, and nothing outside it. A fork cannot obtain a token
+    # carrying this repository's subject, so this is closed to everybody else while staying
+    # tolerant of how the subject is spelled: it changes with the branch, with a tag, and again
+    # when a job names an environment.
     condition {
-      test     = "StringEquals"
+      test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.repository}:ref:refs/heads/main"]
+      values   = ["repo:${var.repository}:*"]
     }
   }
 }
