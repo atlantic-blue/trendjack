@@ -127,3 +127,34 @@ test("likes are the fallback when instagram will not give view counts", () => {
   }));
   assert.equal(chooseMetric(withoutViews), "likes");
 });
+
+test("a prolific creator whose fetched posts are all recent has no baseline at all", () => {
+  // Thirty posts from an account that posts ten times a day never reach past the settled line.
+  const allRecent = makeSettled(30).map((each, index) => ({
+    post: makePost({ postId: `p${index}` as PostId, postedAt: NOW - index * HOUR_MS * 2 }),
+    latest: each.latest,
+  }));
+  const outcome = computeBaseline({
+    creatorId: alice,
+    metric: "views",
+    settled: allRecent,
+    now: NOW,
+  });
+  assert.equal(outcome.ok, false);
+  assert.ok(!outcome.ok && /0 settled posts/.test(outcome.reason));
+});
+
+test("the same creator read far enough back does have one", () => {
+  const reachingBack = makeSettled(30).map((each, index) => ({
+    post: makePost({ postId: `p${index}` as PostId, postedAt: NOW - (index + 1) * DAY_MS }),
+    latest: each.latest,
+  }));
+  const outcome = computeBaseline({
+    creatorId: alice,
+    metric: "views",
+    settled: reachingBack,
+    now: NOW,
+  });
+  assert.ok(outcome.ok);
+  assert.ok(outcome.baseline.settledPostCount >= MIN_SETTLED_POSTS);
+});

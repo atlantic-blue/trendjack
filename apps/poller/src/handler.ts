@@ -11,7 +11,15 @@ import { tikTokLookUp } from "@trendjack/core/digest/enrich.ts";
 import { pollOnce } from "./poll-once.ts";
 import { S3DigestPublisher } from "./s3-publisher.ts";
 
-const POSTS_PER_CREATOR = 30;
+/**
+ * How far back to read each creator.
+ *
+ * It has to reach past the settled line, seven days, or a baseline cannot exist at all. A
+ * prolific account posts thirty times in three days, so thirty was not enough and every one of
+ * their videos came back unscored for want of history. Eighty covers about a fortnight even for
+ * the busiest, and it costs nothing extra: the whole list arrives in one request.
+ */
+const POSTS_PER_CREATOR = 80;
 const WINDOW_HOURS = 72;
 const CANDIDATES = 20;
 /** A gap between creators, so a round does not arrive as one burst of requests. */
