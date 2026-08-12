@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.log
+
+# The panel is the curation we do not publish. Only the invented sample fixture is committed.
+panel.json
+panel.*.json
+!src/**/fixtures/**/panel*.json
+
+# Anything that could carry a key or a real handle.
+.env
+.env.*
+*.key
+.secrets/
