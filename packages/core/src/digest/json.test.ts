@@ -78,3 +78,36 @@ test("a hashtag with one reading is published without a rate, never with a zero"
   assert.equal("dailyRate" in (json.tags?.[0] ?? {}), false);
   assert.equal("videosPerDay" in (json.tags?.[0] ?? {}), false);
 });
+
+test("a growth rate survives being published, because a third of a per cent is not nought", () => {
+  const json = toDigestJson({
+    ...digestWith([]),
+    tags: [
+      {
+        hashtag: "saas",
+        latest: {
+          hashtag: "saas",
+          platform: "tiktok",
+          observedAt: NOW,
+          videoCount: 201_677,
+          viewCount: 1_000,
+        },
+        since: {
+          hashtag: "saas",
+          platform: "tiktok",
+          observedAt: NOW - 3_600_000,
+          videoCount: 201_665,
+          viewCount: 900,
+        },
+        addedVideos: 12,
+        addedViews: 100,
+        hours: 1,
+        videosPerDay: 288,
+        dailyRate: 0.0033,
+      },
+    ],
+  });
+  assert.equal(json.tags?.[0]?.dailyRate, 0.0033);
+  assert.notEqual(json.tags?.[0]?.dailyRate, 0);
+  assert.equal(json.tags?.[0]?.videosPerDay, 288);
+});

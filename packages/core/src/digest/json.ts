@@ -129,7 +129,7 @@ export function toDigestJson(digest: Digest): DigestJson {
       ...(growth.videosPerDay === undefined
         ? {}
         : { videosPerDay: Math.round(growth.videosPerDay) }),
-      ...(growth.dailyRate === undefined ? {} : { dailyRate: round(growth.dailyRate) }),
+      ...(growth.dailyRate === undefined ? {} : { dailyRate: rate(growth.dailyRate) }),
       ...(growth.hours === undefined ? {} : { overHours: round(growth.hours) }),
     })),
   };
@@ -146,4 +146,12 @@ function countReasons(reasons: string[]): { reason: string; count: number }[] {
 /** Two decimal places, because a screen does not need seventeen. */
 function round(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+/**
+ * A growth rate is a small fraction: a third of one per cent a day is 0.0033. Two decimal places
+ * turn every one of those into nought, and a page of noughts says a topic is dead when it is not.
+ */
+function rate(value: number): number {
+  return Math.round(value * 1_000_000) / 1_000_000;
 }
