@@ -16,6 +16,9 @@ import { qualifyCreator, type Verdict } from "@trendjack/core/discover/qualify.t
 import { renderQualify } from "@trendjack/core/discover/report.ts";
 import { BrowserTikTokTagSource } from "@trendjack/core/sources/tiktok-tag.ts";
 import { recordTagReadings } from "@trendjack/core/trends/record.ts";
+import { bestVideosFor } from "@trendjack/core/trends/best-videos.ts";
+import { renderBestVideos } from "@trendjack/core/trends/best-videos-report.ts";
+import { MIN_AGE_HOURS } from "@trendjack/core/trends/videos.ts";
 import { renderRecord } from "@trendjack/core/trends/report.ts";
 
 export interface CliResult {
@@ -36,9 +39,11 @@ const USAGE = [
   "  run      poll the panel once and print the digest",
   "  qualify  check creators against the panel criteria, then print entries to paste",
   "  tags     record how big each hashtag is, and say what changed since last time",
+  "  videos   rank the videos on one hashtag page by views an hour",
   "",
   "  trendjack qualify handle1 handle2",
   "  trendjack tags storytime grwm",
+  "  trendjack videos buildinpublic",
   "",
   "The panel itself lives outside this repository. Point TRENDJACK_PANEL at it.",
 ].join("\n");
@@ -52,6 +57,7 @@ export async function runCli(argv: string[], environment: NodeJS.ProcessEnv): Pr
   if (command === "run") return runCommand(environment);
   if (command === "qualify") return qualifyCommand(argv.slice(1));
   if (command === "tags") return tagsCommand(argv.slice(1), environment);
+  if (command === "videos") return videosCommand(argv.slice(1), environment);
   return { exitCode: 1, output: `Unknown command "${command}".\n\n${USAGE}` };
 }
 
@@ -110,6 +116,11 @@ const QUALIFY_POSTS = 30;
 /** A pause between hashtags, so a round does not arrive as one burst of requests. */
 const TAG_PACE_MS = 3_000;
 
+const CHROME_MISSING =
+  "Set TRENDJACK_CHROME to a Chrome binary. Neither the size of a hashtag nor the videos on its " +
+  "page are in the page source, so a browser has to ask for them.\n" +
+  'On a Mac that is usually "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome".';
+
 async function tagsCommand(argv: string[], environment: NodeJS.ProcessEnv): Promise<CliResult> {
   const hashtags = argv
     .map((each) => each.replace(/^#/, "").trim())
@@ -117,15 +128,7 @@ async function tagsCommand(argv: string[], environment: NodeJS.ProcessEnv): Prom
   if (hashtags.length === 0) return { exitCode: 1, output: "Name at least one hashtag to record." };
 
   const executablePath = environment["TRENDJACK_CHROME"]?.trim();
-  if (!executablePath) {
-    return {
-      exitCode: 1,
-      output:
-        "Set TRENDJACK_CHROME to a Chrome binary. The size of a hashtag is not in the page " +
-        "source, so a browser has to ask for it.\n" +
-        'On a Mac that is usually "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome".',
-    };
-  }
+  if (!executablePath) return { exitCode: 1, output: CHROME_MISSING };
 
   const choice = storeFor(environment);
   const source = new BrowserTikTokTagSource({ executablePath });
@@ -140,6 +143,33 @@ async function tagsCommand(argv: string[], environment: NodeJS.ProcessEnv): Prom
     return {
       exitCode: report.failures.length === hashtags.length ? 2 : 0,
       output: `${renderRecord(report)}\n\n${choice.note}`,
+    };
+  } finally {
+    await source.close();
+  }
+}
+
+/** A pause between video pages, so a round does not arrive as one burst. */
+const VIDEO_PACE_MS = 1_200;
+
+async function videosCommand(argv: string[], environment: NodeJS.ProcessEnv): Promise<CliResult> {
+  const hashtag = argv[0]?.replace(/^#/, "").trim();
+  if (!hashtag) return { exitCode: 1, output: "Name one hashtag to read." };
+
+  const executablePath = environment["TRENDJACK_CHROME"]?.trim();
+  if (!executablePath) return { exitCode: 1, output: CHROME_MISSING };
+
+  const source = new BrowserTikTokTagSource({ executablePath });
+  try {
+    const report = await bestVideosFor({
+      hashtag,
+      source,
+      now: Date.now(),
+      pace: () => new Promise((resolve) => setTimeout(resolve, VIDEO_PACE_MS)),
+    });
+    return {
+      exitCode: report.ranked.length === 0 ? 2 : 0,
+      output: renderBestVideos(report, MIN_AGE_HOURS),
     };
   } finally {
     await source.close();
