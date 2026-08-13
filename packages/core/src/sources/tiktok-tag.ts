@@ -21,6 +21,27 @@ import { postedAtFrom, type TagVideo, type VideoCounts } from "../trends/videos.
  */
 const runChrome = promisify(execFile);
 
+function isLambda(): boolean {
+  return (process.env["AWS_LAMBDA_FUNCTION_NAME"] ?? "").length > 0;
+}
+
+/**
+ * How the browser is started.
+ *
+ * In this runtime everything outside /tmp is read only, and there is no shared memory worth the
+ * name. A browser with nowhere to write its profile starts and drops the connection at once, and
+ * every page then comes back as "Connection closed", which reads like the platform refusing us
+ * rather than the browser failing to start.
+ *
+ * A single process and no zygote were tried and are worse: the browser then closes its own target
+ * before a page can be opened.
+ */
+export function browserArgs(inLambda: boolean): string[] {
+  const args = ["--no-sandbox", "--disable-gpu"];
+  if (!inLambda) return args;
+  return [...args, "--disable-dev-shm-usage", "--disable-crash-reporter", "--no-first-run"];
+}
+
 const DETAIL = /\/api\/challenge\/detail/;
 
 const BROWSER_USER_AGENT =
@@ -30,6 +51,8 @@ const BROWSER_USER_AGENT =
 export interface TikTokTagOptions {
   /** Where Chrome is. There is no default, because a wrong guess fails far from here. */
   executablePath: string;
+  /** Overrides the guess. The browser needs different arguments where it has no shared memory. */
+  inLambda?: boolean;
   clock?: () => number;
   navigationTimeoutMs?: number;
   settleMs?: number;
@@ -132,7 +155,8 @@ export class BrowserTikTokTagSource implements TagStatsSource, TagVideoSource {
     this.#browser ??= await puppeteer.launch({
       executablePath: this.#options.executablePath,
       headless: true,
-      args: ["--no-sandbox", "--disable-gpu"],
+      args: browserArgs(this.#options.inLambda ?? isLambda()),
+      ...((this.#options.inLambda ?? isLambda()) ? { userDataDir: "/tmp/chrome-profile" } : {}),
     });
     return this.#browser;
   }

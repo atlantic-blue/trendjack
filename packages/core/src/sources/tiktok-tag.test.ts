@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { countsIn, sizesIn, videosIn } from "./tiktok-tag.ts";
+import { browserArgs, countsIn, sizesIn, videosIn } from "./tiktok-tag.ts";
 
 /** Captured from a real answer for #storytime on 2026-08-13, trimmed to what is read. */
 const REAL = {
@@ -91,4 +91,17 @@ test("a page with no data gives no counts, never zeroes", () => {
 test("a page whose data is not valid JSON gives no counts rather than throwing", () => {
   const html = `<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">{ broken</script>`;
   assert.equal(countsIn(html), undefined);
+});
+
+test("outside this runtime the browser is started plainly", () => {
+  assert.deepEqual(browserArgs(false), ["--no-sandbox", "--disable-gpu"]);
+});
+
+test("in this runtime it is told there is no shared memory", () => {
+  const args = browserArgs(true);
+  assert.ok(args.includes("--disable-dev-shm-usage"));
+});
+
+test("it is never told to run as one process, which closes its own target before a page opens", () => {
+  assert.equal(browserArgs(true).includes("--single-process"), false);
 });
