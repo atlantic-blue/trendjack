@@ -510,6 +510,10 @@ body {
     grid-template-columns: minmax(9rem, 14rem) 1fr auto;
   }
 
+  .topic-name {
+    order: 1;
+  }
+
   .topic-figures {
     grid-column: auto;
     text-align: right;
@@ -519,6 +523,11 @@ body {
   .topic-rate {
     order: 3;
     min-width: 8rem;
+  }
+
+  /* Last, or it lands between the topic and its own number and separates the two. */
+  .topic-videos {
+    order: 4;
   }
 }
 
