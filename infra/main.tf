@@ -36,6 +36,12 @@ variable "panel_json" {
   sensitive = true
 }
 
+variable "hashtags" {
+  description = "The hashtags whose size is recorded, separated by spaces. This is curation, so it is meant to be edited."
+  type        = string
+  default     = "grwm pov dayinmylife tutorial beforeandafter smallbusiness startup founder productivity saas coding buildinpublic indiehacker aitools notionsetup macbook screenrecording appdemo productdemo storytime"
+}
+
 variable "image_uri" {
   type = string
 }
@@ -281,6 +287,60 @@ resource "aws_lambda_function" "poller" {
   }
 }
 
+# The same image, a different entry point. The browser makes this run far slower than the poll, so
+# it gets its own function rather than sharing one fifteen minute window with it.
+resource "aws_lambda_function" "trends" {
+  function_name = "${var.name}-trends"
+  role          = aws_iam_role.poller.arn
+  package_type  = "Image"
+  image_uri     = var.image_uri
+
+  image_config {
+    command = ["apps/poller/src/trends-index.handler"]
+  }
+
+  timeout = 900
+  # A browser needs the room. One run of this image took every megabyte of three gigabytes.
+  memory_size = 3008
+
+  environment {
+    variables = {
+      TRENDJACK_TABLE = aws_dynamodb_table.trendjack.name
+      TRENDJACK_TAGS  = var.hashtags
+    }
+  }
+}
+
+resource "aws_cloudwatch_log_group" "trends" {
+  name              = "/aws/lambda/${aws_lambda_function.trends.function_name}"
+  retention_in_days = 30
+}
+
+# How big each hashtag is, four times a day. Six hours apart, so a change is large enough to sit
+# outside what the count does on its own.
+resource "aws_cloudwatch_event_rule" "tag_sizes" {
+  name                = "${var.name}-tag-sizes"
+  schedule_expression = "cron(20 0,6,12,18 * * ? *)"
+}
+
+resource "aws_cloudwatch_event_target" "tag_sizes" {
+  rule  = aws_cloudwatch_event_rule.tag_sizes.name
+  arn   = aws_lambda_function.trends.arn
+  input = jsonencode({ job = "tags" })
+}
+
+resource "aws_lambda_permission" "tag_sizes" {
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.trends.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.tag_sizes.arn
+}
+
+# There is no schedule for the videos job, and that is deliberate. Reading how big a hashtag is
+# works from here, because that number is sent to the browser and is never drawn. Reading the
+# videos on a page needs the page to draw, and a rendered hashtag page comes back from this image
+# as a captcha. Invoke it by hand with {"job":"videos"} until that is solved.
+
 resource "aws_cloudwatch_log_group" "poller" {
   name              = "/aws/lambda/${aws_lambda_function.poller.function_name}"
   retention_in_days = 30
@@ -321,6 +381,10 @@ output "distribution_id" {
 
 output "ecr_repository_url" {
   value = aws_ecr_repository.poller.repository_url
+}
+
+output "trends_function_name" {
+  value = aws_lambda_function.trends.function_name
 }
 
 output "function_name" {
