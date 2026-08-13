@@ -104,6 +104,38 @@ jobs:
             [0-9]*) ;;
             *) echo "yt-dlp did not report a version"; exit 1 ;;
           esac
+      - name: Prove the browser is in the image and starts
+        # A build that succeeded proves the layers ran, not that the browser starts. The size of a
+        # hashtag cannot be read without one, so a browser that will not start is a silent stop.
+        run: |
+          set -o pipefail
+          version=$(docker run --rm --entrypoint /usr/local/bin/chrome trendjack-poller --version)
+          echo "$version"
+          case "$version" in
+            *Chrome*) ;;
+            *) echo "the browser did not report a version"; exit 1 ;;
+          esac
+
+      - name: Prove the runtime can find and run the trends handler
+        # The same check as the poller handler, for the second entry point. A handler the runtime
+        # cannot resolve fails at the first real invocation and nowhere earlier.
+        run: |
+          set -o pipefail
+          docker run -d --name trends -p 9001:8080 \
+            --entrypoint /lambda-entrypoint.sh trendjack-poller apps/poller/src/trends-index.handler
+          for attempt in $(seq 1 30); do
+            curl -s -XPOST "http://localhost:9001/2015-03-31/functions/function/invocations" \
+              -d '{}' -o trends.json && break
+            sleep 1
+          done
+          docker rm -f trends > /dev/null
+          cat trends.json
+          if grep -q "Cannot find module" trends.json; then
+            echo "The runtime could not load the trends handler."
+            exit 1
+          fi
+          grep -q MissingSettingError trends.json
+
       - name: Prove the runtime can find and run the handler
         # Through the Lambda runtime itself, not by importing the file with node. The runtime
         # resolves a handler by file extension and will not find a TypeScript file, which an
