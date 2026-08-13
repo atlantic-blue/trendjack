@@ -19,6 +19,7 @@ import { recordTagReadings } from "@trendjack/core/trends/record.ts";
 import { bestVideosFor } from "@trendjack/core/trends/best-videos.ts";
 import { renderBestVideos } from "@trendjack/core/trends/best-videos-report.ts";
 import { MIN_AGE_HOURS } from "@trendjack/core/trends/videos.ts";
+import { tagVideosFrom } from "@trendjack/core/trends/best-videos.ts";
 import { renderRecord } from "@trendjack/core/trends/report.ts";
 
 export interface CliResult {
@@ -152,6 +153,9 @@ async function tagsCommand(argv: string[], environment: NodeJS.ProcessEnv): Prom
 /** A pause between video pages, so a round does not arrive as one burst. */
 const VIDEO_PACE_MS = 1_200;
 
+/** How many make it onto the page. The rest are read and kept, they are just not shown. */
+const PUBLISHED_VIDEOS = 5;
+
 async function videosCommand(argv: string[], environment: NodeJS.ProcessEnv): Promise<CliResult> {
   const hashtag = argv[0]?.replace(/^#/, "").trim();
   if (!hashtag) return { exitCode: 1, output: "Name one hashtag to read." };
@@ -159,17 +163,22 @@ async function videosCommand(argv: string[], environment: NodeJS.ProcessEnv): Pr
   const executablePath = environment["TRENDJACK_CHROME"]?.trim();
   if (!executablePath) return { exitCode: 1, output: CHROME_MISSING };
 
+  const choice = storeFor(environment);
   const source = new BrowserTikTokTagSource({ executablePath });
   try {
+    const now = Date.now();
     const report = await bestVideosFor({
       hashtag,
       source,
-      now: Date.now(),
+      now,
       pace: () => new Promise((resolve) => setTimeout(resolve, VIDEO_PACE_MS)),
     });
+    if (report.ranked.length > 0) {
+      await choice.store.putTagVideos(tagVideosFrom(report, now, PUBLISHED_VIDEOS));
+    }
     return {
       exitCode: report.ranked.length === 0 ? 2 : 0,
-      output: renderBestVideos(report, MIN_AGE_HOURS),
+      output: `${renderBestVideos(report, MIN_AGE_HOURS)}\n\n${choice.note}`,
     };
   } finally {
     await source.close();

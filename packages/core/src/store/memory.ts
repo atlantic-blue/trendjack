@@ -7,6 +7,7 @@ import type {
   PostId,
   Score,
   TagReading,
+  TagVideos,
 } from "../contracts/types.ts";
 
 /**
@@ -36,6 +37,17 @@ export class InMemoryStore implements Store {
   readonly #baselines = new Map<string, Baseline>();
   readonly #scores: Score[] = [];
   readonly #tagReadings = new Map<string, Map<number, TagReading>>();
+  readonly #tagVideos = new Map<string, TagVideos>();
+
+  async putTagVideos(videos: TagVideos): Promise<void> {
+    const existing = this.#tagVideos.get(videos.hashtag);
+    if (existing && existing.observedAt > videos.observedAt) return;
+    this.#tagVideos.set(videos.hashtag, videos);
+  }
+
+  async latestTagVideosFor(hashtag: string): Promise<TagVideos | undefined> {
+    return this.#tagVideos.get(hashtag);
+  }
 
   async appendTagReading(reading: TagReading): Promise<void> {
     const forTag = this.#tagReadings.get(reading.hashtag) ?? new Map<number, TagReading>();

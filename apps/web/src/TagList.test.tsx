@@ -62,3 +62,33 @@ describe("the topics", () => {
     expect(names).toEqual(["#saas", "#founder"]);
   });
 });
+
+describe("the videos under a topic", () => {
+  const video = {
+    videoId: "7673301891551448341",
+    url: "https://www.tiktok.com/@millee.md/video/7673301891551448341",
+    handle: "millee.md",
+    caption: "how I built it in a weekend",
+    views: 78_500,
+    likes: 4_000,
+    ageHours: 16.9,
+    viewsPerHour: 4_659,
+  };
+
+  test("each video links out and says what it did", () => {
+    render(<TagList tags={[tag({ videos: [video] })]} />);
+    const link = screen.getByRole("link", { name: "how I built it in a weekend" });
+    expect(link.getAttribute("href")).toBe(video.url);
+    expect(screen.getByText(/4,659 views an hour, 78,500 in 16.9 hours, @millee.md/)).toBeTruthy();
+  });
+
+  test("a video with no caption is shown by its creator instead of as a blank link", () => {
+    render(<TagList tags={[tag({ videos: [{ ...video, caption: "   " }] })]} />);
+    expect(screen.getByRole("link", { name: "@millee.md" })).toBeTruthy();
+  });
+
+  test("a topic whose page has not been read shows no video list at all", () => {
+    render(<TagList tags={[tag()]} />);
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+});

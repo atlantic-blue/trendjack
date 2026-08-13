@@ -1,4 +1,5 @@
 import type { TagVideoSource } from "../contracts/ports.ts";
+import { tagVideosSchema, type TagVideos } from "../contracts/types.ts";
 import {
   MIN_AGE_HOURS,
   rankVideos,
@@ -72,4 +73,34 @@ export async function bestVideosFor(options: BestVideosOptions): Promise<BestVid
 /** Newest first, so a limit keeps the recent videos rather than an arbitrary slice of the page. */
 function newestFirst(videos: TagVideo[]): TagVideo[] {
   return [...videos].sort((left, right) => (right.postedAt ?? 0) - (left.postedAt ?? 0));
+}
+
+/**
+ * The report, in the shape the store keeps.
+ *
+ * The count of what was on the page travels with it, so a short list stays distinguishable from a
+ * page that had nothing worth ranking.
+ */
+export function tagVideosFrom(
+  report: BestVideosReport,
+  observedAt: number,
+  limit: number,
+): TagVideos {
+  return tagVideosSchema.parse({
+    hashtag: report.hashtag,
+    platform: "tiktok",
+    observedAt,
+    onThePage: report.onThePage,
+    videos: report.ranked.slice(0, limit).map((video) => ({
+      videoId: video.videoId,
+      handle: video.handle,
+      url: video.url,
+      caption: video.caption,
+      postedAt: video.postedAt,
+      views: video.views,
+      likes: video.likes,
+      comments: video.comments,
+      viewsPerHour: video.viewsPerHour,
+    })),
+  });
 }

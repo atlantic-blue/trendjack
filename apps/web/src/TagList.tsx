@@ -1,4 +1,4 @@
-import type { DigestTag } from "./digest.ts";
+import type { DigestTag, DigestTagVideo } from "./digest.ts";
 
 export interface TagListProps {
   tags: DigestTag[];
@@ -20,6 +20,18 @@ export function TagList({ tags }: TagListProps) {
           <span className="topic-name">#{tag.hashtag}</span>
           <span className="topic-figures">{totalText(tag)}</span>
           <span className={changeClass(tag)}>{changeText(tag)}</span>
+          {tag.videos && tag.videos.length > 0 ? (
+            <ol className="topic-videos">
+              {tag.videos.map((video) => (
+                <li key={video.videoId}>
+                  <a href={video.url} target="_blank" rel="noreferrer noopener">
+                    {video.caption.trim().length > 0 ? video.caption : `@${video.handle}`}
+                  </a>
+                  <span className="topic-video-figures">{videoText(video)}</span>
+                </li>
+              ))}
+            </ol>
+          ) : null}
         </li>
       ))}
     </ol>
@@ -46,6 +58,17 @@ function totalText(tag: DigestTag): string {
   const total = `${whole(tag.videoCount)} in the count`;
   if (tag.dailyRate === undefined) return total;
   return `${total}, which is ${(tag.dailyRate * 100).toFixed(2)}% a day if it holds`;
+}
+
+/**
+ * What a video did, in the words of what was read. The rate is per hour since it was posted, so a
+ * video from this morning can beat one with far more views that took a year to get them.
+ */
+function videoText(video: DigestTagVideo): string {
+  return (
+    `${whole(video.viewsPerHour)} views an hour, ` +
+    `${whole(video.views)} in ${span(video.ageHours)}, @${video.handle}`
+  );
 }
 
 function span(hours: number): string {

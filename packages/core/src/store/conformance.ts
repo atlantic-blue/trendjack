@@ -212,11 +212,48 @@ export function describeStoreConformance(name: string, makeStore: () => Promise<
       );
     });
 
+    test("the most recent look at a hashtag's videos is the one that comes back", async () => {
+      const store = await makeStore();
+      await store.putTagVideos(videos("buildinpublic", 1_000, "old"));
+      await store.putTagVideos(videos("buildinpublic", 9_000, "new"));
+      const found = await store.latestTagVideosFor("buildinpublic");
+      assert.equal(found?.videos[0]?.videoId, "new");
+      assert.equal(found?.observedAt, 9_000);
+    });
+
+    test("one hashtag's videos never come back for another", async () => {
+      const store = await makeStore();
+      await store.putTagVideos(videos("buildinpublic", 1_000, "a"));
+      assert.equal(await store.latestTagVideosFor("saas"), undefined);
+    });
+
     test("a hashtag never read returns nothing rather than failing", async () => {
       const store = await makeStore();
       assert.deepEqual(await store.tagReadingsFor("neverasked", 0), []);
     });
   });
+}
+
+function videos(hashtag: string, observedAt: number, videoId: string) {
+  return {
+    hashtag,
+    platform: "tiktok" as const,
+    observedAt,
+    onThePage: 30,
+    videos: [
+      {
+        videoId,
+        handle: "someone",
+        url: `https://www.tiktok.com/@someone/video/${videoId}`,
+        caption: "",
+        postedAt: observedAt - 1_000,
+        views: 100,
+        likes: 10,
+        comments: 1,
+        viewsPerHour: 4.2,
+      },
+    ],
+  };
 }
 
 function reading(hashtag: string, observedAt: number, videoCount: number) {
