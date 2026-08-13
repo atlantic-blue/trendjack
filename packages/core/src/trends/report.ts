@@ -15,12 +15,12 @@ export function renderRecord(report: RecordReport): string {
   ];
 
   const ranked = [...report.growth].sort(byFastestGrowth);
-  const growing = ranked.filter((each) => each.dailyRate !== undefined);
-  const first = ranked.filter((each) => each.dailyRate === undefined);
+  const changed = ranked.filter((each) => each.since !== undefined);
+  const first = ranked.filter((each) => each.since === undefined);
 
-  if (growing.length > 0) {
-    lines.push("Growing fastest against their own size:", "");
-    for (const growth of growing) lines.push(`  ${line(growth)}`);
+  if (changed.length > 0) {
+    lines.push("What the counts did, largest change against their size first:", "");
+    for (const growth of changed) lines.push(`  ${line(growth)}`);
     lines.push("");
   }
 
@@ -28,7 +28,7 @@ export function renderRecord(report: RecordReport): string {
     lines.push(
       first.length === ranked.length
         ? "First reading. Nothing to compare with until the next round."
-        : "Read for the first time, so no growth yet:",
+        : "Read for the first time, so no change yet:",
       "",
     );
     for (const growth of first) {
@@ -43,15 +43,30 @@ export function renderRecord(report: RecordReport): string {
   return lines.join("\n").trimEnd();
 }
 
+/** The reading leads. The rate follows it, in brackets, because it is worked out and not read. */
 function line(growth: Growth): string {
-  const perDay = growth.videosPerDay ?? 0;
   const rate = ((growth.dailyRate ?? 0) * 100).toFixed(2);
+  return `${growth.hashtag.padEnd(20)} ${observedPart(growth)}  (${rate}% a day if it holds)`;
+}
+
+/**
+ * What was read, never what it would be if it kept up.
+ *
+ * "the count rose by 1", not "one video was posted". The number is a net total the platform
+ * reports, so a rise of one can be forty posted and thirty nine deleted, and we never see which.
+ */
+function observedPart(growth: Growth): string {
+  const added = growth.addedVideos ?? 0;
+  const sign = added < 0 ? "" : "+";
   return (
-    `${growth.hashtag.padEnd(20)} ${rate.padStart(7)}% a day  ` +
-    `${whole(Math.round(perDay)).padStart(12)} videos a day  ` +
-    `${whole(growth.latest.videoCount).padStart(14)} in total  ` +
-    `over ${(growth.hours ?? 0).toFixed(1)}h`
+    `${sign}${whole(added)} to the count in ${span(growth.hours ?? 0)}, ` +
+    `now ${whole(growth.latest.videoCount)}`
   );
+}
+
+function span(hours: number): string {
+  if (hours >= 1) return `${hours.toFixed(1)} hours`;
+  return `${Math.round(hours * 60)} minutes`;
 }
 
 function whole(value: number): string {

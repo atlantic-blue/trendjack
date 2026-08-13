@@ -5,12 +5,11 @@ export interface TagListProps {
 }
 
 /**
- * The topics, fastest growing first.
+ * The topics, largest change against their size first.
  *
- * There is no video to show here, so the number is the content. The rate is the loudest thing on
- * the row, because it is the reason the row is there at all: a topic that added four hundred
- * videos to seven hundred is a trend, and one that added forty thousand to sixty million is a
- * Tuesday.
+ * The reading leads and the rate follows it. A count that rose by one over half an hour is
+ * "+1 in 31 minutes", and calling that 46 a day is arithmetic rather than a measurement. How much
+ * change is worth calling a trend is not known yet, so nothing here passes a verdict.
  */
 export function TagList({ tags }: TagListProps) {
   if (tags.length === 0) return <p className="empty">No hashtag has been read yet.</p>;
@@ -19,39 +18,44 @@ export function TagList({ tags }: TagListProps) {
       {tags.map((tag) => (
         <li className="topic" key={tag.hashtag}>
           <span className="topic-name">#{tag.hashtag}</span>
-          <span className={rateClass(tag)}>{rateText(tag)}</span>
-          <span className="topic-figures">{figuresText(tag)}</span>
+          <span className="topic-figures">{totalText(tag)}</span>
+          <span className={changeClass(tag)}>{changeText(tag)}</span>
         </li>
       ))}
     </ol>
   );
 }
 
-function rateClass(tag: DigestTag): string {
-  if (tag.dailyRate === undefined) return "topic-rate topic-rate-unknown";
-  return tag.dailyRate < 0 ? "topic-rate topic-rate-falling" : "topic-rate";
+function changeClass(tag: DigestTag): string {
+  if (tag.addedVideos === undefined) return "topic-rate topic-rate-unknown";
+  return tag.addedVideos < 0 ? "topic-rate topic-rate-falling" : "topic-rate";
 }
 
-/** A first reading says so. A rate of nought and a rate nobody could read mean opposite things. */
-function rateText(tag: DigestTag): string {
-  if (tag.dailyRate === undefined) return "first reading";
-  return `${(tag.dailyRate * 100).toFixed(2)}% a day`;
+/**
+ * What the count did, in the words of what was read.
+ *
+ * "the count rose by 1", never "one video was posted". The number is a net total the platform
+ * reports, so a rise of one can be forty posted and thirty nine deleted, and we never see which.
+ */
+function changeText(tag: DigestTag): string {
+  if (tag.addedVideos === undefined) return "first reading";
+  return `${signed(tag.addedVideos)} in ${span(tag.overHours ?? 0)}`;
 }
 
-function figuresText(tag: DigestTag): string {
-  const total = `${whole(tag.videoCount)} videos`;
-  if (tag.videosPerDay === undefined) return total;
-  const measured = tag.overHours === undefined ? "" : `, measured over ${hours(tag.overHours)}`;
-  return `${signed(tag.videosPerDay)} a day, of ${total}${measured}`;
+function totalText(tag: DigestTag): string {
+  const total = `${whole(tag.videoCount)} in the count`;
+  if (tag.dailyRate === undefined) return total;
+  return `${total}, which is ${(tag.dailyRate * 100).toFixed(2)}% a day if it holds`;
 }
 
-function hours(value: number): string {
-  if (value >= 1) return `${value.toFixed(1)} hours`;
-  return `${Math.round(value * 60)} minutes`;
+function span(hours: number): string {
+  if (hours >= 24) return `${(hours / 24).toFixed(1)} days`;
+  if (hours >= 1) return `${hours.toFixed(1)} hours`;
+  return `${Math.round(hours * 60)} minutes`;
 }
 
 function signed(value: number): string {
-  return value < 0 ? `${whole(value)}` : `+${whole(value)}`;
+  return value < 0 ? whole(value) : `+${whole(value)}`;
 }
 
 function whole(value: number): string {

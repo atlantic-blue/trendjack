@@ -184,6 +184,7 @@ describe("the topics on the page", () => {
             videoCount: 201_665,
             viewCount: 1_000,
             observedAt: NOW,
+            addedVideos: 605,
             dailyRate: 0.003,
             videosPerDay: 605,
             overHours: 24,
@@ -193,6 +194,6 @@ describe("the topics on the page", () => {
     );
     render(<App />);
     await waitFor(() => expect(screen.getByText("#saas")).toBeTruthy());
-    expect(screen.getByText("0.30% a day")).toBeTruthy();
+    expect(screen.getByText(/0\.30% a day if it holds/)).toBeTruthy();
   });
 });
