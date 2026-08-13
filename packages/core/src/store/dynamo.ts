@@ -6,7 +6,15 @@ import {
   type QueryCommandInput,
 } from "@aws-sdk/lib-dynamodb";
 import type { Store } from "../contracts/ports.ts";
-import type { Baseline, CreatorId, Observation, Post, PostId, Score } from "../contracts/types.ts";
+import type {
+  Baseline,
+  CreatorId,
+  Observation,
+  Post,
+  PostId,
+  Score,
+  TagReading,
+} from "../contracts/types.ts";
 import { ObservationConflictError } from "./memory.ts";
 
 /**
@@ -20,6 +28,8 @@ import { ObservationConflictError } from "./memory.ts";
  *   baseline      pk = creator#<id>         sk = baseline#<metric>
  *   score         pk = post#<postId>        sk = score#<computedAt>
  *                 gsi2pk = scores           gsi2sk = <computedAt>
+ *   tag reading   pk = tag#<hashtag>        sk = reading#<observedAt>
+ *                 gsi2pk = tags             gsi2sk = <observedAt>
  *
  * The two collection indexes exist because the digest needs "every post in the window" and
  * "every score since", neither of which any natural key gives you.
@@ -29,6 +39,7 @@ export const COLLECTION_INDEX = "collection-index";
 
 const WINDOW_PARTITION = "window";
 const SCORES_PARTITION = "scores";
+const TAGS_PARTITION = "tags";
 
 export interface DynamoStoreOptions {
   client: DynamoDBClient;
@@ -44,6 +55,42 @@ export class DynamoStore implements Store {
       marshallOptions: { removeUndefinedValues: true },
     });
     this.#table = options.tableName;
+  }
+
+  async appendTagReading(reading: TagReading): Promise<void> {
+    await this.#documents.send(
+      new PutCommand({
+        TableName: this.#table,
+        Item: {
+          pk: `tag#${reading.hashtag}`,
+          sk: `reading#${pad(reading.observedAt)}`,
+          gsi2pk: TAGS_PARTITION,
+          gsi2sk: reading.observedAt,
+          body: reading,
+        },
+      }),
+    );
+  }
+
+  async tagReadingsFor(hashtag: string, since: number): Promise<TagReading[]> {
+    const items = await this.#queryAll({
+      TableName: this.#table,
+      KeyConditionExpression: "pk = :pk AND sk >= :since",
+      ExpressionAttributeValues: { ":pk": `tag#${hashtag}`, ":since": `reading#${pad(since)}` },
+      ScanIndexForward: true,
+    });
+    return items.map((item) => item["body"] as TagReading);
+  }
+
+  async tagReadingsSince(since: number): Promise<TagReading[]> {
+    const items = await this.#queryAll({
+      TableName: this.#table,
+      IndexName: COLLECTION_INDEX,
+      KeyConditionExpression: "gsi2pk = :pk AND gsi2sk >= :since",
+      ExpressionAttributeValues: { ":pk": TAGS_PARTITION, ":since": since },
+      ScanIndexForward: true,
+    });
+    return items.map((item) => item["body"] as TagReading);
   }
 
   async putPost(post: Post): Promise<void> {

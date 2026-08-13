@@ -1,4 +1,13 @@
-import type { Baseline, CreatorId, Observation, Platform, Post, PostId, Score } from "./types.ts";
+import type {
+  Baseline,
+  CreatorId,
+  Observation,
+  Platform,
+  Post,
+  PostId,
+  Score,
+  TagReading,
+} from "./types.ts";
 
 /** A post together with the reading taken at the moment it was fetched. */
 export interface Sighting {
@@ -52,11 +61,41 @@ export class SourceContractError extends Error {
 }
 
 /**
+ * How many videos and views a hashtag has right now.
+ *
+ * This is the one question a platform answers directly. A creator has to be named before it will
+ * say anything, and a trending list does not exist, but a topic will report its own size, exactly,
+ * to anybody who asks. Two readings a day apart give the number of videos people added.
+ */
+export interface TagStatsSource {
+  readonly platform: Platform;
+  readingFor(hashtag: string): Promise<TagReading>;
+}
+
+/** Raised when a hashtag could be asked for but did not report its size. */
+export class TagUnavailableError extends Error {
+  readonly platform: Platform;
+  readonly hashtag: string;
+
+  constructor(platform: Platform, hashtag: string, detail: string) {
+    super(`${platform} did not report a size for #${hashtag}: ${detail}`);
+    this.name = "TagUnavailableError";
+    this.platform = platform;
+    this.hashtag = hashtag;
+  }
+}
+
+/**
  * The append only history. An observation is never updated in place, because replaying a
  * proposed change to the heuristic over the whole past is the only way weights stop being
  * guesses, and that replay is worthless if the past has been edited.
  */
 export interface Store {
+  appendTagReading(reading: TagReading): Promise<void>;
+  /** Every reading of one hashtag since a moment, oldest first. */
+  tagReadingsFor(hashtag: string, since: number): Promise<TagReading[]>;
+  /** Every reading of every hashtag since a moment. The set of hashtags is whatever was read. */
+  tagReadingsSince(since: number): Promise<TagReading[]>;
   appendObservation(observation: Observation): Promise<void>;
   /** Idempotent: seeing the same post again must not create a second row. */
   putPost(post: Post): Promise<void>;

@@ -36,6 +36,18 @@ export interface DigestProven {
   thumbnail?: string;
 }
 
+/** A topic and how fast it is growing. Absent from a digest written before any was read. */
+export interface DigestTag {
+  hashtag: string;
+  videoCount: number;
+  viewCount: number;
+  observedAt: number;
+  addedVideos?: number;
+  videosPerDay?: number;
+  dailyRate?: number;
+  overHours?: number;
+}
+
 export interface DigestJson {
   version: number;
   generatedAt: number;
@@ -47,6 +59,7 @@ export interface DigestJson {
   proven: DigestProven[];
   heldBack: { count: number; reasons: { reason: string; count: number }[] };
   unscored: { count: number; reasons: { reason: string; count: number }[] };
+  tags?: DigestTag[];
 }
 
 export interface Movement {

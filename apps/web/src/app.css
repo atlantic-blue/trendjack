@@ -454,3 +454,70 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* The topics. No video to show, so the rate is the content and it carries the accent. */
+.topics {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  overflow: hidden;
+}
+
+.topic {
+  display: grid;
+  grid-template-columns: minmax(9rem, 1fr) auto;
+  align-items: baseline;
+  gap: var(--s2) var(--s3);
+  padding: var(--s3) var(--s4);
+  background: var(--paper);
+}
+
+.topic-name {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.topic-rate {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  font-size: var(--t-title);
+  letter-spacing: -0.02em;
+  color: var(--accent);
+  text-align: right;
+}
+
+.topic-rate-falling,
+.topic-rate-unknown {
+  color: var(--ink-faint);
+  font-size: var(--t-body);
+  font-weight: 600;
+}
+
+.topic-figures {
+  grid-column: 1 / -1;
+  color: var(--ink-faint);
+  font-size: var(--t-small);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 640px) {
+  .topic {
+    grid-template-columns: minmax(9rem, 14rem) 1fr auto;
+  }
+
+  .topic-figures {
+    grid-column: auto;
+    text-align: right;
+    order: 2;
+  }
+
+  .topic-rate {
+    order: 3;
+    min-width: 8rem;
+  }
+}

@@ -53,6 +53,7 @@ function digestOf(overrides: Partial<Digest> = {}): Digest {
     proven: [],
     heldBack: [],
     unscored: [],
+    tags: [],
     ...overrides,
   };
 }

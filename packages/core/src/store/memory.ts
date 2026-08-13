@@ -1,5 +1,13 @@
 import type { Store } from "../contracts/ports.ts";
-import type { Baseline, CreatorId, Observation, Post, PostId, Score } from "../contracts/types.ts";
+import type {
+  Baseline,
+  CreatorId,
+  Observation,
+  Post,
+  PostId,
+  Score,
+  TagReading,
+} from "../contracts/types.ts";
 
 /**
  * Raised when a second, different reading claims a moment that has already been recorded.
@@ -27,6 +35,26 @@ export class InMemoryStore implements Store {
   readonly #observations = new Map<PostId, Map<number, Observation>>();
   readonly #baselines = new Map<string, Baseline>();
   readonly #scores: Score[] = [];
+  readonly #tagReadings = new Map<string, Map<number, TagReading>>();
+
+  async appendTagReading(reading: TagReading): Promise<void> {
+    const forTag = this.#tagReadings.get(reading.hashtag) ?? new Map<number, TagReading>();
+    forTag.set(reading.observedAt, reading);
+    this.#tagReadings.set(reading.hashtag, forTag);
+  }
+
+  async tagReadingsSince(since: number): Promise<TagReading[]> {
+    return [...this.#tagReadings.values()]
+      .flatMap((forTag) => [...forTag.values()])
+      .filter((reading) => reading.observedAt >= since)
+      .sort((left, right) => left.observedAt - right.observedAt);
+  }
+
+  async tagReadingsFor(hashtag: string, since: number): Promise<TagReading[]> {
+    return [...(this.#tagReadings.get(hashtag)?.values() ?? [])]
+      .filter((reading) => reading.observedAt >= since)
+      .sort((left, right) => left.observedAt - right.observedAt);
+  }
 
   async putPost(post: Post): Promise<void> {
     this.#posts.set(post.postId, post);

@@ -72,6 +72,24 @@ export const observationSchema = z
   .strict();
 export type Observation = z.infer<typeof observationSchema>;
 
+/**
+ * One reading of a hashtag at one moment.
+ *
+ * Unlike a view count on a post, these two numbers arrive exact rather than rounded to four
+ * figures. So the difference between two readings is the number of videos people actually added
+ * between them, which is the one thing that says a topic is growing.
+ */
+export const tagReadingSchema = z
+  .object({
+    hashtag: z.string().min(1),
+    platform: platformSchema,
+    observedAt: instantSchema,
+    videoCount: countSchema,
+    viewCount: countSchema,
+  })
+  .strict();
+export type TagReading = z.infer<typeof tagReadingSchema>;
+
 export const confidenceSchema = z.enum(["low", "medium", "high"]);
 export type Confidence = z.infer<typeof confidenceSchema>;
 

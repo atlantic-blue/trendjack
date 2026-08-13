@@ -11,6 +11,13 @@ import {
   SETTLED_AFTER_MS,
 } from "../ranking/constants.ts";
 import { rank, scorePost, type ScoreOutcome } from "../ranking/score.ts";
+import { growthForAll, type Growth } from "../trends/growth.ts";
+
+/**
+ * How far back hashtag readings are read from. A week, so a missed day still leaves two ends to
+ * compare, and so a topic that was busy last Tuesday does not colour today.
+ */
+const TAG_WINDOW_HOURS = 7 * 24;
 
 export interface DigestRow {
   post: Post;
@@ -37,6 +44,8 @@ export interface Digest {
   proven: ProvenRow[];
   heldBack: DigestRow[];
   unscored: { postId: string; reason: string }[];
+  /** How fast each watched hashtag is growing. Empty until a round has recorded one. */
+  tags: Growth[];
 }
 
 export interface BuildOptions {
@@ -49,6 +58,8 @@ export interface BuildOptions {
   provenLikes?: number;
   /** How far back the proven list looks. Far wider than the window for candidates. */
   provenWindowHours?: number;
+  /** How far back to look for hashtag readings when working out growth. */
+  tagWindowHours?: number;
 }
 
 /**
@@ -96,6 +107,11 @@ export async function buildDigest(options: BuildOptions): Promise<Digest> {
     unscored: outcomes
       .filter((each) => !each.scored)
       .map((each) => ({ postId: each.postId, reason: each.reason })),
+    tags: growthForAll(
+      await options.store.tagReadingsSince(
+        options.now - (options.tagWindowHours ?? TAG_WINDOW_HOURS) * HOUR_MS,
+      ),
+    ),
   };
 }
 
