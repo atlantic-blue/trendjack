@@ -60,8 +60,11 @@ RUN curl -sSfL -o /tmp/chrome.zip \
     && ln -s /opt/chrome/chrome-headless-shell-linux64/chrome-headless-shell /usr/local/bin/chrome \
     && chrome --version
 
-# Chrome writes a profile, and everything outside /tmp is read only in this runtime.
+# Everything outside /tmp is read only in this runtime, and a browser writes before it will talk.
 ENV TRENDJACK_CHROME=/usr/local/bin/chrome
+ENV HOME=/tmp
+ENV XDG_CONFIG_HOME=/tmp
+ENV XDG_CACHE_HOME=/tmp
 
 COPY package.json package-lock.json ${LAMBDA_TASK_ROOT}/
 COPY packages/core/package.json ${LAMBDA_TASK_ROOT}/packages/core/
