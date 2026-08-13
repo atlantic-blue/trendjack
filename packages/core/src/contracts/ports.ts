@@ -94,6 +94,8 @@ export interface Store {
   appendTagReading(reading: TagReading): Promise<void>;
   /** Every reading of one hashtag since a moment, oldest first. */
   tagReadingsFor(hashtag: string, since: number): Promise<TagReading[]>;
+  /** Every reading of every hashtag since a moment. The set of hashtags is whatever was read. */
+  tagReadingsSince(since: number): Promise<TagReading[]>;
   appendObservation(observation: Observation): Promise<void>;
   /** Idempotent: seeing the same post again must not create a second row. */
   putPost(post: Post): Promise<void>;

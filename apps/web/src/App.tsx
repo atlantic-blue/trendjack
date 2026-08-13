@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { TagList } from "./TagList.tsx";
 import { VideoCard } from "./VideoCard.tsx";
 import type { DigestJson } from "./digest.ts";
 import {
@@ -115,6 +116,17 @@ export function App() {
         <strong>{digest.postsConsidered}</strong> videos posted in the last {digest.windowHours}{" "}
         hours by <strong>{digest.creatorsSeen}</strong> creators.
       </p>
+
+      <section>
+        <div className="section-head">
+          <h2>Topics growing fastest</h2>
+          <p>
+            How many videos each hashtag gained, against how many it already had. A small topic
+            doubling beats a huge one adding thousands.
+          </p>
+        </div>
+        <TagList tags={digest.tags ?? []} />
+      </section>
 
       <section>
         <div className="section-head">

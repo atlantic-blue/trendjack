@@ -187,6 +187,31 @@ export function describeStoreConformance(name: string, makeStore: () => Promise<
       );
     });
 
+    test("every hashtag read comes back together, so the set is whatever was recorded", async () => {
+      const store = await makeStore();
+      await store.appendTagReading(reading("storytime", 1_000, 10));
+      await store.appendTagReading(reading("grwm", 2_000, 20));
+      await store.appendTagReading(reading("storytime", 3_000, 30));
+      const found = await store.tagReadingsSince(0);
+      assert.equal(found.length, 3);
+      assert.deepEqual(new Set(found.map((each) => each.hashtag)), new Set(["storytime", "grwm"]));
+      assert.deepEqual(
+        found.map((each) => each.observedAt),
+        [1_000, 2_000, 3_000],
+      );
+    });
+
+    test("a reading before the window is left out of the collected set too", async () => {
+      const store = await makeStore();
+      await store.appendTagReading(reading("storytime", 1_000, 10));
+      await store.appendTagReading(reading("grwm", 9_000, 20));
+      const found = await store.tagReadingsSince(5_000);
+      assert.deepEqual(
+        found.map((each) => each.hashtag),
+        ["grwm"],
+      );
+    });
+
     test("a hashtag never read returns nothing rather than failing", async () => {
       const store = await makeStore();
       assert.deepEqual(await store.tagReadingsFor("neverasked", 0), []);

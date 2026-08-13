@@ -40,6 +40,22 @@ export interface DigestJsonProven {
   ageHours: number;
 }
 
+/**
+ * A hashtag and how fast it is growing. Absent until a round has recorded one, so a digest
+ * written before any hashtag was read stays readable.
+ */
+export interface DigestJsonTag {
+  hashtag: string;
+  videoCount: number;
+  viewCount: number;
+  observedAt: number;
+  /** Absent until the hashtag has been read twice. Nothing can be said from one reading. */
+  addedVideos?: number;
+  videosPerDay?: number;
+  dailyRate?: number;
+  overHours?: number;
+}
+
 export interface DigestJson {
   version: number;
   generatedAt: number;
@@ -53,6 +69,7 @@ export interface DigestJson {
   proven: DigestJsonProven[];
   heldBack: { count: number; reasons: { reason: string; count: number }[] };
   unscored: { count: number; reasons: { reason: string; count: number }[] };
+  tags?: DigestJsonTag[];
 }
 
 /**
@@ -103,6 +120,18 @@ export function toDigestJson(digest: Digest): DigestJson {
       count: digest.unscored.length,
       reasons: countReasons(digest.unscored.map((each) => each.reason)),
     },
+    tags: digest.tags.map((growth) => ({
+      hashtag: growth.hashtag,
+      videoCount: growth.latest.videoCount,
+      viewCount: growth.latest.viewCount,
+      observedAt: growth.latest.observedAt,
+      ...(growth.addedVideos === undefined ? {} : { addedVideos: growth.addedVideos }),
+      ...(growth.videosPerDay === undefined
+        ? {}
+        : { videosPerDay: Math.round(growth.videosPerDay) }),
+      ...(growth.dailyRate === undefined ? {} : { dailyRate: round(growth.dailyRate) }),
+      ...(growth.hours === undefined ? {} : { overHours: round(growth.hours) }),
+    })),
   };
 }
 

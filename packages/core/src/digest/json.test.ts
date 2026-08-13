@@ -29,6 +29,7 @@ function digestWith(proven: { post: ReturnType<typeof post>; likes: number }[]):
     proven,
     heldBack: [],
     unscored: [],
+    tags: [],
   };
 }
 
@@ -48,4 +49,32 @@ test("an age in days is still reported in hours, since the label says hours", ()
     digestWith([{ post: post("a", NOW - 20 * 24 * HOUR), likes: 200_000 }]),
   );
   assert.equal(json.proven[0]?.ageHours, 480);
+});
+
+test("a hashtag with one reading is published without a rate, never with a zero", () => {
+  const json = toDigestJson({
+    ...digestWith([]),
+    tags: [
+      {
+        hashtag: "storytime",
+        latest: {
+          hashtag: "storytime",
+          platform: "tiktok",
+          observedAt: NOW,
+          videoCount: 60_455_583,
+          viewCount: 1_238_133_174_079,
+        },
+        since: undefined,
+        addedVideos: undefined,
+        addedViews: undefined,
+        hours: undefined,
+        videosPerDay: undefined,
+        dailyRate: undefined,
+      },
+    ],
+  });
+  assert.equal(json.tags?.[0]?.videoCount, 60_455_583);
+  assert.equal(json.tags?.[0]?.viewCount, 1_238_133_174_079);
+  assert.equal("dailyRate" in (json.tags?.[0] ?? {}), false);
+  assert.equal("videosPerDay" in (json.tags?.[0] ?? {}), false);
 });

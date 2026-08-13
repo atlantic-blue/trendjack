@@ -43,6 +43,13 @@ export class InMemoryStore implements Store {
     this.#tagReadings.set(reading.hashtag, forTag);
   }
 
+  async tagReadingsSince(since: number): Promise<TagReading[]> {
+    return [...this.#tagReadings.values()]
+      .flatMap((forTag) => [...forTag.values()])
+      .filter((reading) => reading.observedAt >= since)
+      .sort((left, right) => left.observedAt - right.observedAt);
+  }
+
   async tagReadingsFor(hashtag: string, since: number): Promise<TagReading[]> {
     return [...(this.#tagReadings.get(hashtag)?.values() ?? [])]
       .filter((reading) => reading.observedAt >= since)

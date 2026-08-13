@@ -158,3 +158,41 @@ test("a range whose file was never written says so, rather than showing a parse 
     expect(screen.getByText(/there is no digest for this range yet/)).toBeTruthy(),
   );
 });
+
+describe("the topics on the page", () => {
+  test("a digest with no topics still draws the section, and says none were read", async () => {
+    serve(digest());
+    render(<App />);
+    await waitFor(() => expect(screen.getByText("Topics growing fastest")).toBeTruthy());
+    expect(screen.getByText("No hashtag has been read yet.")).toBeTruthy();
+  });
+
+  test("a digest written before topics existed is still read, not refused", async () => {
+    const old = digest();
+    delete old.tags;
+    serve(old);
+    render(<App />);
+    await waitFor(() => expect(screen.getByText("Topics growing fastest")).toBeTruthy());
+  });
+
+  test("the topics that were read are shown", async () => {
+    serve(
+      digest({
+        tags: [
+          {
+            hashtag: "saas",
+            videoCount: 201_665,
+            viewCount: 1_000,
+            observedAt: NOW,
+            dailyRate: 0.003,
+            videosPerDay: 605,
+            overHours: 24,
+          },
+        ],
+      }),
+    );
+    render(<App />);
+    await waitFor(() => expect(screen.getByText("#saas")).toBeTruthy());
+    expect(screen.getByText("0.30% a day")).toBeTruthy();
+  });
+});

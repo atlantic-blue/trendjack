@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import type { TagReading } from "../contracts/types.ts";
 import { DAY_MS, HOUR_MS } from "../ranking/constants.ts";
-import { byFastestGrowth, growthFrom } from "./growth.ts";
+import { byFastestGrowth, growthForAll, growthFrom } from "./growth.ts";
 
 const NOW = 1_786_600_000_000;
 
@@ -84,4 +84,23 @@ test("a topic that lost videos reports a fall rather than nothing", () => {
   const growth = growthFrom("storytime", [reading(DAY_MS, 1_000), reading(0, 900)]);
   assert.equal(growth?.addedVideos, -100);
   assert.ok((growth?.dailyRate ?? 0) < 0);
+});
+
+test("every hashtag in the readings comes back, fastest growing first", () => {
+  const all = growthForAll([
+    reading(DAY_MS, 500),
+    reading(0, 1_500),
+    { ...reading(DAY_MS, 1_000), hashtag: "slow" },
+    { ...reading(0, 1_010), hashtag: "slow" },
+    { ...reading(0, 42), hashtag: "onlyonce" },
+  ]);
+  assert.deepEqual(
+    all.map((each) => each.hashtag),
+    ["storytime", "slow", "onlyonce"],
+  );
+  assert.equal(all[2]?.dailyRate, undefined);
+});
+
+test("no readings give no hashtags rather than an error", () => {
+  assert.deepEqual(growthForAll([]), []);
 });

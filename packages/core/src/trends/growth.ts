@@ -62,6 +62,23 @@ export function growthFrom(hashtag: string, readings: TagReading[]): Growth | un
   };
 }
 
+/**
+ * The growth of every hashtag that has been read, fastest first.
+ *
+ * The set of hashtags is whatever the store holds. Nothing has to be configured twice, so a tag
+ * added to a round shows up here on its own.
+ */
+export function growthForAll(readings: TagReading[]): Growth[] {
+  const byTag = new Map<string, TagReading[]>();
+  for (const reading of readings) {
+    byTag.set(reading.hashtag, [...(byTag.get(reading.hashtag) ?? []), reading]);
+  }
+  return [...byTag.entries()]
+    .map(([hashtag, forTag]) => growthFrom(hashtag, forTag))
+    .filter((each): each is Growth => each !== undefined)
+    .sort(byFastestGrowth);
+}
+
 /** Fastest growing first. A hashtag with only one reading has nothing to rank on and sorts last. */
 export function byFastestGrowth(left: Growth, right: Growth): number {
   return (right.dailyRate ?? -1) - (left.dailyRate ?? -1);
