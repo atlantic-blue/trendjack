@@ -28,18 +28,27 @@ function isLambda(): boolean {
 /**
  * How the browser is started.
  *
- * In this runtime everything outside /tmp is read only, and there is no shared memory worth the
- * name. A browser with nowhere to write its profile starts and drops the connection at once, and
- * every page then comes back as "Connection closed", which reads like the platform refusing us
- * rather than the browser failing to start.
+ * Three things are wrong with this runtime from a browser's point of view, and it says so once it
+ * is asked. Everything outside /tmp is read only. There is no shared memory: it reports "Less than
+ * 64MB of free space in temporary directory for shared memory files: 0". And the process it
+ * normally forks children from cannot be created, which it reports as "Check failed: Operation not
+ * permitted" followed by "Did not receive ping from zygote child", after which the connection
+ * closes and the only symptom left is that the pipe went away.
  *
- * A single process and no zygote were tried and are worse: the browser then closes its own target
- * before a page can be opened.
+ * Running everything in one process is not the answer: the browser then closes its own target
+ * before a page can be opened. There is a test that keeps that argument out.
  */
 export function browserArgs(inLambda: boolean): string[] {
   const args = ["--no-sandbox", "--disable-gpu"];
   if (!inLambda) return args;
-  return [...args, "--disable-dev-shm-usage", "--disable-crash-reporter", "--no-first-run"];
+  return [
+    ...args,
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--no-zygote",
+    "--disable-crash-reporter",
+    "--no-first-run",
+  ];
 }
 
 const DETAIL = /\/api\/challenge\/detail/;
