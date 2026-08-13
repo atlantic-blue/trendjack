@@ -30,6 +30,7 @@ function digestWith(proven: { post: ReturnType<typeof post>; likes: number }[]):
     heldBack: [],
     unscored: [],
     tags: [],
+    tagCandidates: [],
   };
 }
 
@@ -139,6 +140,7 @@ test("the videos on a topic's page are published with the age they had when read
           platform: "tiktok",
           observedAt: readAt,
           onThePage: 30,
+          seenHashtags: [],
           videos: [
             {
               videoId: "7673301891551448341",

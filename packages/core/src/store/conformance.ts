@@ -240,6 +240,7 @@ function videos(hashtag: string, observedAt: number, videoId: string) {
     platform: "tiktok" as const,
     observedAt,
     onThePage: 30,
+    seenHashtags: [],
     videos: [
       {
         videoId,

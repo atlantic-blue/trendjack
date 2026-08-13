@@ -120,6 +120,13 @@ export const tagVideosSchema = z
     /** How many the page held before anything was dropped, so a short list is never a quiet page. */
     onThePage: countSchema,
     videos: z.array(rankedVideoSchema),
+    /**
+     * Every hashtag written in the captions on that page, with how many videos used each. This is
+     * where new topics come from: search is closed to us, and people label their own work.
+     */
+    seenHashtags: z
+      .array(z.object({ hashtag: z.string().min(1), videos: countSchema }).strict())
+      .default([]),
   })
   .strict();
 export type TagVideos = z.infer<typeof tagVideosSchema>;

@@ -197,3 +197,25 @@ describe("the topics on the page", () => {
     expect(screen.getByText(/0\.30% a day if it holds/)).toBeTruthy();
   });
 });
+
+describe("the topics we are not watching", () => {
+  test("a digest with none says so, rather than drawing an empty list", async () => {
+    serve(digest());
+    render(<App />);
+    await waitFor(() => expect(screen.getByText("Not watching yet")).toBeTruthy());
+    expect(screen.getByText("No page has been read for its captions yet.")).toBeTruthy();
+  });
+
+  test("a candidate says which topics it turned up under", async () => {
+    serve(
+      digest({
+        tagCandidates: [
+          { hashtag: "microsaas", fromTopics: 2, videos: 3, topics: ["saas", "founder"] },
+        ],
+      }),
+    );
+    render(<App />);
+    await waitFor(() => expect(screen.getByText("#microsaas")).toBeTruthy());
+    expect(screen.getByText("under saas, founder, in 3 videos")).toBeTruthy();
+  });
+});

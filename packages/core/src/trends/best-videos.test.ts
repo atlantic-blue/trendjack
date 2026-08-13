@@ -119,6 +119,7 @@ test("what is stored keeps how many were on the page, so a short list is not a q
   const kept = tagVideosFrom(
     {
       hashtag: "buildinpublic",
+      onThePageVideos: [],
       onThePage: 30,
       tooYoung: 4,
       unreadable: 0,

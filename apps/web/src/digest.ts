@@ -36,6 +36,14 @@ export interface DigestProven {
   thumbnail?: string;
 }
 
+/** A hashtag people are writing in captions that we do not watch. */
+export interface DigestTagCandidate {
+  hashtag: string;
+  fromTopics: number;
+  videos: number;
+  topics: string[];
+}
+
 export interface DigestTagVideo {
   videoId: string;
   url: string;
@@ -73,6 +81,7 @@ export interface DigestJson {
   heldBack: { count: number; reasons: { reason: string; count: number }[] };
   unscored: { count: number; reasons: { reason: string; count: number }[] };
   tags?: DigestTag[];
+  tagCandidates?: DigestTagCandidate[];
 }
 
 export interface Movement {
