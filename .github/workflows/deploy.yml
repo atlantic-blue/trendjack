@@ -118,4 +118,4 @@ jobs:
             echo "$gone"
             exit 1
           fi
-          echo "kept all $(grep -c . before.txt || true) files the poller had written" 
+          echo "kept all $(grep -c . before.txt || true) files the poller had written"
