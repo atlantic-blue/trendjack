@@ -44,6 +44,17 @@ export interface DigestJsonProven {
  * A hashtag and how fast it is growing. Absent until a round has recorded one, so a digest
  * written before any hashtag was read stays readable.
  */
+export interface DigestJsonTagVideo {
+  videoId: string;
+  url: string;
+  handle: string;
+  caption: string;
+  views: number;
+  likes: number;
+  ageHours: number;
+  viewsPerHour: number;
+}
+
 export interface DigestJsonTag {
   hashtag: string;
   videoCount: number;
@@ -54,6 +65,10 @@ export interface DigestJsonTag {
   videosPerDay?: number;
   dailyRate?: number;
   overHours?: number;
+  /** The best videos on that hashtag's page when it was last read. */
+  videos?: DigestJsonTagVideo[];
+  /** When the page was last read, so a stale list is visible as one. */
+  videosReadAt?: number;
 }
 
 export interface DigestJson {
@@ -131,6 +146,21 @@ export function toDigestJson(digest: Digest): DigestJson {
         : { videosPerDay: Math.round(growth.videosPerDay) }),
       ...(growth.dailyRate === undefined ? {} : { dailyRate: rate(growth.dailyRate) }),
       ...(growth.hours === undefined ? {} : { overHours: round(growth.hours) }),
+      ...(growth.videos === undefined
+        ? {}
+        : {
+            videosReadAt: growth.videos.observedAt,
+            videos: growth.videos.videos.map((video) => ({
+              videoId: video.videoId,
+              url: video.url,
+              handle: video.handle,
+              caption: video.caption,
+              views: video.views,
+              likes: video.likes,
+              ageHours: round((growth.videos!.observedAt - video.postedAt) / 3_600_000),
+              viewsPerHour: Math.round(video.viewsPerHour),
+            })),
+          }),
     })),
   };
 }

@@ -36,6 +36,17 @@ export interface DigestProven {
   thumbnail?: string;
 }
 
+export interface DigestTagVideo {
+  videoId: string;
+  url: string;
+  handle: string;
+  caption: string;
+  views: number;
+  likes: number;
+  ageHours: number;
+  viewsPerHour: number;
+}
+
 /** A topic and how fast it is growing. Absent from a digest written before any was read. */
 export interface DigestTag {
   hashtag: string;
@@ -46,6 +57,8 @@ export interface DigestTag {
   videosPerDay?: number;
   dailyRate?: number;
   overHours?: number;
+  videos?: DigestTagVideo[];
+  videosReadAt?: number;
 }
 
 export interface DigestJson {

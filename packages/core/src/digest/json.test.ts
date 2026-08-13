@@ -70,6 +70,7 @@ test("a hashtag with one reading is published without a rate, never with a zero"
         hours: undefined,
         videosPerDay: undefined,
         dailyRate: undefined,
+        videos: undefined,
       },
     ],
   });
@@ -104,10 +105,88 @@ test("a growth rate survives being published, because a third of a per cent is n
         hours: 1,
         videosPerDay: 288,
         dailyRate: 0.0033,
+        videos: undefined,
       },
     ],
   });
   assert.equal(json.tags?.[0]?.dailyRate, 0.0033);
   assert.notEqual(json.tags?.[0]?.dailyRate, 0);
   assert.equal(json.tags?.[0]?.videosPerDay, 288);
+});
+
+test("the videos on a topic's page are published with the age they had when read", () => {
+  const readAt = NOW - 2 * 3_600_000;
+  const json = toDigestJson({
+    ...digestWith([]),
+    tags: [
+      {
+        hashtag: "buildinpublic",
+        latest: {
+          hashtag: "buildinpublic",
+          platform: "tiktok",
+          observedAt: NOW,
+          videoCount: 184_109,
+          viewCount: 1_000,
+        },
+        since: undefined,
+        addedVideos: undefined,
+        addedViews: undefined,
+        hours: undefined,
+        videosPerDay: undefined,
+        dailyRate: undefined,
+        videos: {
+          hashtag: "buildinpublic",
+          platform: "tiktok",
+          observedAt: readAt,
+          onThePage: 30,
+          videos: [
+            {
+              videoId: "7673301891551448341",
+              handle: "millee.md",
+              url: "https://www.tiktok.com/@millee.md/video/7673301891551448341",
+              caption: "a caption",
+              postedAt: readAt - 16.9 * 3_600_000,
+              views: 78_500,
+              likes: 4_000,
+              comments: 100,
+              viewsPerHour: 4_659.1,
+            },
+          ],
+        },
+      },
+    ],
+  });
+  const tag = json.tags?.[0];
+  assert.equal(tag?.videosReadAt, readAt);
+  assert.equal(tag?.videos?.length, 1);
+  assert.equal(tag?.videos?.[0]?.viewsPerHour, 4_659);
+  assert.equal(tag?.videos?.[0]?.ageHours, 16.9);
+  assert.equal(tag?.videos?.[0]?.handle, "millee.md");
+});
+
+test("a topic whose page has never been read publishes no videos rather than an empty list", () => {
+  const json = toDigestJson({
+    ...digestWith([]),
+    tags: [
+      {
+        hashtag: "saas",
+        latest: {
+          hashtag: "saas",
+          platform: "tiktok",
+          observedAt: NOW,
+          videoCount: 1,
+          viewCount: 1,
+        },
+        since: undefined,
+        addedVideos: undefined,
+        addedViews: undefined,
+        hours: undefined,
+        videosPerDay: undefined,
+        dailyRate: undefined,
+        videos: undefined,
+      },
+    ],
+  });
+  assert.equal("videos" in (json.tags?.[0] ?? {}), false);
+  assert.equal("videosReadAt" in (json.tags?.[0] ?? {}), false);
 });

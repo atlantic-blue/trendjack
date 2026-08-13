@@ -90,6 +90,40 @@ export const tagReadingSchema = z
   .strict();
 export type TagReading = z.infer<typeof tagReadingSchema>;
 
+/**
+ * One video on a hashtag page, with what it was doing when we looked.
+ *
+ * The rate is kept alongside the counts rather than worked out later, because it depends on the
+ * moment the counts were read, and that moment does not survive into the file.
+ */
+export const rankedVideoSchema = z
+  .object({
+    videoId: z.string().min(1),
+    handle: z.string().min(1),
+    url: z.string().url(),
+    caption: z.string(),
+    postedAt: instantSchema,
+    views: countSchema,
+    likes: countSchema,
+    comments: countSchema,
+    viewsPerHour: z.number().nonnegative(),
+  })
+  .strict();
+export type RankedVideoRecord = z.infer<typeof rankedVideoSchema>;
+
+/** The best videos on one hashtag page, as they stood at one moment. */
+export const tagVideosSchema = z
+  .object({
+    hashtag: z.string().min(1),
+    platform: platformSchema,
+    observedAt: instantSchema,
+    /** How many the page held before anything was dropped, so a short list is never a quiet page. */
+    onThePage: countSchema,
+    videos: z.array(rankedVideoSchema),
+  })
+  .strict();
+export type TagVideos = z.infer<typeof tagVideosSchema>;
+
 export const confidenceSchema = z.enum(["low", "medium", "high"]);
 export type Confidence = z.infer<typeof confidenceSchema>;
 

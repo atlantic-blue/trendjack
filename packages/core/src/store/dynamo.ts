@@ -14,6 +14,7 @@ import type {
   PostId,
   Score,
   TagReading,
+  TagVideos,
 } from "../contracts/types.ts";
 import { ObservationConflictError } from "./memory.ts";
 
@@ -29,6 +30,7 @@ import { ObservationConflictError } from "./memory.ts";
  *   score         pk = post#<postId>        sk = score#<computedAt>
  *                 gsi2pk = scores           gsi2sk = <computedAt>
  *   tag reading   pk = tag#<hashtag>        sk = reading#<observedAt>
+ *   tag videos    pk = tag#<hashtag>        sk = videos#<observedAt>
  *                 gsi2pk = tags             gsi2sk = <observedAt>
  *
  * The two collection indexes exist because the digest needs "every post in the window" and
@@ -80,6 +82,31 @@ export class DynamoStore implements Store {
       ScanIndexForward: true,
     });
     return items.map((item) => item["body"] as TagReading);
+  }
+
+  async putTagVideos(videos: TagVideos): Promise<void> {
+    await this.#documents.send(
+      new PutCommand({
+        TableName: this.#table,
+        Item: {
+          pk: `tag#${videos.hashtag}`,
+          sk: `videos#${pad(videos.observedAt)}`,
+          body: videos,
+        },
+      }),
+    );
+  }
+
+  /** Newest first, one page, because only the most recent look is ever wanted. */
+  async latestTagVideosFor(hashtag: string): Promise<TagVideos | undefined> {
+    const items = await this.#queryAll({
+      TableName: this.#table,
+      KeyConditionExpression: "pk = :pk AND begins_with(sk, :prefix)",
+      ExpressionAttributeValues: { ":pk": `tag#${hashtag}`, ":prefix": "videos#" },
+      ScanIndexForward: false,
+      Limit: 1,
+    });
+    return items[0]?.["body"] as TagVideos | undefined;
   }
 
   async tagReadingsSince(since: number): Promise<TagReading[]> {

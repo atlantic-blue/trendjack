@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import type { TagVideoSource } from "../contracts/ports.ts";
 import { HOUR_MS } from "../ranking/constants.ts";
-import { bestVideosFor } from "./best-videos.ts";
+import { bestVideosFor, tagVideosFrom } from "./best-videos.ts";
 import type { TagVideo, VideoCounts } from "./videos.ts";
 
 const NOW = 1_786_600_000_000;
@@ -113,4 +113,41 @@ test("the pause runs between fetches and not before the first", async () => {
     },
   });
   assert.equal(paused, 2);
+});
+
+test("what is stored keeps how many were on the page, so a short list is not a quiet page", () => {
+  const kept = tagVideosFrom(
+    {
+      hashtag: "buildinpublic",
+      onThePage: 30,
+      tooYoung: 4,
+      unreadable: 0,
+      ranked: [
+        {
+          ...video("a", 16.9),
+          postedAt: NOW - 16.9 * HOUR_MS,
+          views: 78_500,
+          likes: 4_000,
+          comments: 100,
+          ageHours: 16.9,
+          viewsPerHour: 4_659.1,
+        },
+        {
+          ...video("b", 24),
+          postedAt: NOW - 24 * HOUR_MS,
+          views: 100,
+          likes: 1,
+          comments: 1,
+          ageHours: 24,
+          viewsPerHour: 4.2,
+        },
+      ],
+    },
+    NOW,
+    1,
+  );
+  assert.equal(kept.onThePage, 30);
+  assert.equal(kept.videos.length, 1);
+  assert.equal(kept.videos[0]?.videoId, "a");
+  assert.equal(kept.videos[0]?.views, 78_500);
 });

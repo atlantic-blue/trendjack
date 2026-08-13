@@ -8,6 +8,7 @@ import type {
   PostId,
   Score,
   TagReading,
+  TagVideos,
 } from "./types.ts";
 
 /** A post together with the reading taken at the moment it was fetched. */
@@ -110,6 +111,9 @@ export interface Store {
   tagReadingsFor(hashtag: string, since: number): Promise<TagReading[]>;
   /** Every reading of every hashtag since a moment. The set of hashtags is whatever was read. */
   tagReadingsSince(since: number): Promise<TagReading[]>;
+  putTagVideos(videos: TagVideos): Promise<void>;
+  /** The most recent look at one hashtag's page, or nothing if it has never been looked at. */
+  latestTagVideosFor(hashtag: string): Promise<TagVideos | undefined>;
   appendObservation(observation: Observation): Promise<void>;
   /** Idempotent: seeing the same post again must not create a second row. */
   putPost(post: Post): Promise<void>;

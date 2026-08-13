@@ -12,6 +12,28 @@ import {
 } from "../ranking/constants.ts";
 import { rank, scorePost, type ScoreOutcome } from "../ranking/score.ts";
 import { growthForAll, type Growth } from "../trends/growth.ts";
+import type { TagVideos } from "../contracts/types.ts";
+
+export interface TagGrowth extends Growth {
+  /** The last look at that hashtag's page, or nothing if nobody has looked. */
+  videos: TagVideos | undefined;
+}
+
+/**
+ * Joins each topic to the videos on its page.
+ *
+ * A topic that is growing and a topic whose page we have never read look the same in the numbers,
+ * so the videos are attached rather than fetched here: a digest is built from what is stored, and
+ * reading thirty pages while building one would make it slow and fragile.
+ */
+async function withVideos(store: Store, growth: Growth[]): Promise<TagGrowth[]> {
+  return Promise.all(
+    growth.map(async (each) => ({
+      ...each,
+      videos: await store.latestTagVideosFor(each.hashtag),
+    })),
+  );
+}
 
 /**
  * How far back hashtag readings are read from. A week, so a missed day still leaves two ends to
@@ -44,8 +66,8 @@ export interface Digest {
   proven: ProvenRow[];
   heldBack: DigestRow[];
   unscored: { postId: string; reason: string }[];
-  /** How fast each watched hashtag is growing. Empty until a round has recorded one. */
-  tags: Growth[];
+  /** How fast each watched hashtag is growing, and the best videos on its page. */
+  tags: TagGrowth[];
 }
 
 export interface BuildOptions {
@@ -107,9 +129,12 @@ export async function buildDigest(options: BuildOptions): Promise<Digest> {
     unscored: outcomes
       .filter((each) => !each.scored)
       .map((each) => ({ postId: each.postId, reason: each.reason })),
-    tags: growthForAll(
-      await options.store.tagReadingsSince(
-        options.now - (options.tagWindowHours ?? TAG_WINDOW_HOURS) * HOUR_MS,
+    tags: await withVideos(
+      options.store,
+      growthForAll(
+        await options.store.tagReadingsSince(
+          options.now - (options.tagWindowHours ?? TAG_WINDOW_HOURS) * HOUR_MS,
+        ),
       ),
     ),
   };

@@ -521,3 +521,41 @@ body {
     min-width: 8rem;
   }
 }
+
+/* The videos under a topic. A list of links, because the topic is the row and these are evidence. */
+.topic-videos {
+  grid-column: 1 / -1;
+  list-style: none;
+  margin: var(--s2) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s1);
+}
+
+.topic-videos li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s1) var(--s3);
+  font-size: var(--t-small);
+}
+
+.topic-videos a {
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+  max-width: 46ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topic-videos a:hover {
+  border-bottom-color: var(--accent);
+}
+
+.topic-video-figures {
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+}
