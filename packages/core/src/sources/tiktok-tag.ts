@@ -156,6 +156,9 @@ export class BrowserTikTokTagSource implements TagStatsSource, TagVideoSource {
       executablePath: this.#options.executablePath,
       headless: true,
       args: browserArgs(this.#options.inLambda ?? isLambda()),
+      // The browser's own output, where it will not start. Without it the only symptom is
+      // "Connection closed", which says the pipe went away and nothing about why.
+      dumpio: this.#options.inLambda ?? isLambda(),
       ...((this.#options.inLambda ?? isLambda()) ? { userDataDir: "/tmp/chrome-profile" } : {}),
     });
     return this.#browser;
