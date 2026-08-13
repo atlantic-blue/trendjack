@@ -1,3 +1,4 @@
+import type { TagVideo, VideoCounts } from "../trends/videos.ts";
 import type {
   Baseline,
   CreatorId,
@@ -70,6 +71,19 @@ export class SourceContractError extends Error {
 export interface TagStatsSource {
   readonly platform: Platform;
   readingFor(hashtag: string): Promise<TagReading>;
+}
+
+/**
+ * The videos a hashtag page is showing, and how each one is doing.
+ *
+ * Listing is one request for the whole page. Counts are one request per video, so the caller is
+ * expected to drop what it does not want before asking.
+ */
+export interface TagVideoSource {
+  readonly platform: Platform;
+  videosFor(hashtag: string): Promise<TagVideo[]>;
+  /** Undefined when the page did not describe the video, which is not an error worth stopping for. */
+  countsFor(video: TagVideo): Promise<VideoCounts | undefined>;
 }
 
 /** Raised when a hashtag could be asked for but did not report its size. */

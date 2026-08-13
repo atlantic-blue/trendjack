@@ -1,6 +1,13 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import puppeteer, { type Browser } from "puppeteer-core";
-import { TagUnavailableError, type TagStatsSource } from "../contracts/ports.ts";
+import {
+  TagUnavailableError,
+  type TagStatsSource,
+  type TagVideoSource,
+} from "../contracts/ports.ts";
 import { tagReadingSchema, type TagReading } from "../contracts/types.ts";
+import { postedAtFrom, type TagVideo, type VideoCounts } from "../trends/videos.ts";
 
 /**
  * How big a hashtag is, read from the page that knows.
@@ -12,7 +19,13 @@ import { tagReadingSchema, type TagReading } from "../contracts/types.ts";
  * Two numbers come back and they are exact, not rounded to four figures the way a view count on a
  * post is. That is what makes the difference between two readings mean something.
  */
+const runChrome = promisify(execFile);
+
 const DETAIL = /\/api\/challenge\/detail/;
+
+const BROWSER_USER_AGENT =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) " +
+  "Chrome/131.0.0.0 Safari/537.36";
 
 export interface TikTokTagOptions {
   /** Where Chrome is. There is no default, because a wrong guess fails far from here. */
@@ -27,7 +40,7 @@ interface Sizes {
   viewCount: number;
 }
 
-export class BrowserTikTokTagSource implements TagStatsSource {
+export class BrowserTikTokTagSource implements TagStatsSource, TagVideoSource {
   readonly platform = "tiktok" as const;
   readonly #options: TikTokTagOptions;
   #browser: Browser | undefined;
@@ -60,6 +73,33 @@ export class BrowserTikTokTagSource implements TagStatsSource {
    * A single session asking for twelve hashtag pages in a row was shown a puzzle, and the size
    * request then answered with status 200 and an empty body. Separate contexts were not.
    */
+  /**
+   * Renders a page by running Chrome once and reading what it drew.
+   *
+   * Driving the same browser through the automation protocol is refused: at the moment a
+   * subprocess returned thirty cards, a driven session was shown a puzzle instead and drew none.
+   * A session carries the marks of being driven, and a subprocess does not, so the cheap path is
+   * also the one that works.
+   *
+   * The size of a hashtag still needs the driven browser, because that number never reaches the
+   * page and has to be read from the answer the page received.
+   */
+  async #dumpDom(url: string): Promise<string> {
+    const { stdout } = await runChrome(
+      this.#options.executablePath,
+      [
+        "--headless",
+        "--disable-gpu",
+        "--no-sandbox",
+        `--virtual-time-budget=${this.#options.settleMs ?? 25_000}`,
+        "--dump-dom",
+        url,
+      ],
+      { maxBuffer: 64 * 1024 * 1024, timeout: this.#options.navigationTimeoutMs ?? 120_000 },
+    );
+    return stdout;
+  }
+
   async #sizesFor(hashtag: string): Promise<Sizes> {
     const browser = await this.#open();
     const context = await browser.createBrowserContext();
@@ -97,6 +137,31 @@ export class BrowserTikTokTagSource implements TagStatsSource {
     return this.#browser;
   }
 
+  /** One render for the whole page. The counts are not on it, so this is the cheap half. */
+  async videosFor(hashtag: string): Promise<TagVideo[]> {
+    const name = hashtag.replace(/^#/, "").trim();
+    const html = await this.#dumpDom(`https://www.tiktok.com/tag/${encodeURIComponent(name)}`);
+    const videos = videosIn(html, name.toLowerCase());
+    if (videos.length === 0) {
+      throw new TagUnavailableError(
+        this.platform,
+        name,
+        "the page drew no videos, which is what a refusal looks like",
+      );
+    }
+    return videos;
+  }
+
+  /** A plain request. The counts are in the page source, so no browser is needed for this half. */
+  async countsFor(video: TagVideo): Promise<VideoCounts | undefined> {
+    const response = await fetch(video.url, {
+      headers: { "user-agent": BROWSER_USER_AGENT },
+      signal: AbortSignal.timeout(this.#options.navigationTimeoutMs ?? 40_000),
+    });
+    if (!response.ok) return undefined;
+    return countsIn(await response.text());
+  }
+
   async close(): Promise<void> {
     await this.#browser?.close();
     this.#browser = undefined;
@@ -131,4 +196,63 @@ function whole(value: string | number | undefined): number | undefined {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) return undefined;
   return Math.round(parsed);
+}
+
+const CARD = 'data-e2e="challenge-item"';
+const LINK = /href="https:\/\/www\.tiktok\.com\/@([A-Za-z0-9._]+)\/video\/(\d+)"/;
+const CAPTION = /data-e2e="challenge-item-desc"[^>]*>([\s\S]*?)<\/div>/;
+const REHYDRATION = /__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/;
+
+/** The videos a rendered hashtag page drew. No counts: the page does not carry them. */
+export function videosIn(html: string, hashtag: string): TagVideo[] {
+  const videos: TagVideo[] = [];
+  for (const block of html.split(CARD).slice(1)) {
+    const link = block.match(LINK);
+    if (!link?.[1] || !link[2]) continue;
+    videos.push({
+      hashtag,
+      handle: link[1].toLowerCase(),
+      videoId: link[2],
+      url: `https://www.tiktok.com/@${link[1]}/video/${link[2]}`,
+      caption: plainText(block.match(CAPTION)?.[1] ?? ""),
+      postedAt: postedAtFrom(link[2]),
+    });
+  }
+  return videos;
+}
+
+/**
+ * The counts a video page carries.
+ *
+ * `statsV2` holds them as strings. Views and likes arrive rounded to about four figures, the same
+ * as everywhere else, but comments do not, so a comment count moves where a view count is frozen.
+ */
+export function countsIn(html: string): VideoCounts | undefined {
+  const match = html.match(REHYDRATION);
+  if (!match?.[1]) return undefined;
+  let item: Record<string, any> | undefined;
+  try {
+    item = JSON.parse(match[1])?.["__DEFAULT_SCOPE__"]?.["webapp.video-detail"]?.itemInfo
+      ?.itemStruct;
+  } catch {
+    return undefined;
+  }
+  const stats = item?.["statsV2"] ?? item?.["stats"];
+  if (!stats) return undefined;
+  const views = whole(stats.playCount);
+  const likes = whole(stats.diggCount);
+  const comments = whole(stats.commentCount);
+  if (views === undefined || likes === undefined || comments === undefined) return undefined;
+  return { views, likes, comments };
+}
+
+function plainText(markup: string): string {
+  return markup
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
