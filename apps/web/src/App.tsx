@@ -130,6 +130,31 @@ export function App() {
 
       <section>
         <div className="section-head">
+          <h2>Not watching yet</h2>
+          <p>
+            Hashtags people wrote in the captions of the pages above. One that turns up under
+            several topics is a stronger candidate than a busy one under a single topic.
+          </p>
+        </div>
+        {digest.tagCandidates && digest.tagCandidates.length > 0 ? (
+          <ul className="candidates">
+            {digest.tagCandidates.map((candidate) => (
+              <li key={candidate.hashtag}>
+                <span className="candidate-name">#{candidate.hashtag}</span>
+                <span className="candidate-figures">
+                  under {candidate.topics.join(", ")}, in {candidate.videos} video
+                  {candidate.videos === 1 ? "" : "s"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="empty">No page has been read for its captions yet.</p>
+        )}
+      </section>
+
+      <section>
+        <div className="section-head">
           <h2>Worth a look</h2>
           <p>
             Posted in the last {digest.windowHours} hours. Beating their own creator's normal, and

@@ -54,6 +54,7 @@ function digestOf(overrides: Partial<Digest> = {}): Digest {
     heldBack: [],
     unscored: [],
     tags: [],
+    tagCandidates: [],
     ...overrides,
   };
 }

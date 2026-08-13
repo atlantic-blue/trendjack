@@ -12,6 +12,7 @@ import {
 } from "../ranking/constants.ts";
 import { rank, scorePost, type ScoreOutcome } from "../ranking/score.ts";
 import { growthForAll, type Growth } from "../trends/growth.ts";
+import { candidatesFrom, type TagCandidate } from "../trends/candidates.ts";
 import type { TagVideos } from "../contracts/types.ts";
 
 export interface TagGrowth extends Growth {
@@ -68,6 +69,8 @@ export interface Digest {
   unscored: { postId: string; reason: string }[];
   /** How fast each watched hashtag is growing, and the best videos on its page. */
   tags: TagGrowth[];
+  /** Hashtags written in the captions of pages we read, that nobody is watching yet. */
+  tagCandidates: TagCandidate[];
 }
 
 export interface BuildOptions {
@@ -113,6 +116,14 @@ export async function buildDigest(options: BuildOptions): Promise<Digest> {
 
   const { ranked, suppressed } = rank(outcomes);
   const byPost = new Map(posts.map((post) => [post.postId as string, post]));
+  const tags = await withVideos(
+    options.store,
+    growthForAll(
+      await options.store.tagReadingsSince(
+        options.now - (options.tagWindowHours ?? TAG_WINDOW_HOURS) * HOUR_MS,
+      ),
+    ),
+  );
 
   return {
     generatedAt: options.now,
@@ -129,13 +140,10 @@ export async function buildDigest(options: BuildOptions): Promise<Digest> {
     unscored: outcomes
       .filter((each) => !each.scored)
       .map((each) => ({ postId: each.postId, reason: each.reason })),
-    tags: await withVideos(
-      options.store,
-      growthForAll(
-        await options.store.tagReadingsSince(
-          options.now - (options.tagWindowHours ?? TAG_WINDOW_HOURS) * HOUR_MS,
-        ),
-      ),
+    tags,
+    tagCandidates: candidatesFrom(
+      tags.map((each) => each.videos).filter((each): each is TagVideos => each !== undefined),
+      tags.map((each) => each.hashtag),
     ),
   };
 }

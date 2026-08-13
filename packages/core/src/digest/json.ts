@@ -7,6 +7,9 @@ import type { Digest } from "./build.ts";
  */
 export const DIGEST_FORMAT_VERSION = 1;
 
+/** Enough to act on. The rest are in the store and can be looked at whenever. */
+const CANDIDATES_SHOWN = 12;
+
 export interface DigestJsonCandidate {
   /** Filled in after the digest is built, by asking the platform how the video looks. */
   thumbnail?: string;
@@ -85,6 +88,8 @@ export interface DigestJson {
   heldBack: { count: number; reasons: { reason: string; count: number }[] };
   unscored: { count: number; reasons: { reason: string; count: number }[] };
   tags?: DigestJsonTag[];
+  /** Hashtags people wrote in their captions that nobody is watching yet. */
+  tagCandidates?: { hashtag: string; fromTopics: number; videos: number; topics: string[] }[];
 }
 
 /**
@@ -135,6 +140,7 @@ export function toDigestJson(digest: Digest): DigestJson {
       count: digest.unscored.length,
       reasons: countReasons(digest.unscored.map((each) => each.reason)),
     },
+    tagCandidates: digest.tagCandidates.slice(0, CANDIDATES_SHOWN),
     tags: digest.tags.map((growth) => ({
       hashtag: growth.hashtag,
       videoCount: growth.latest.videoCount,

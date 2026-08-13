@@ -568,3 +568,32 @@ body {
   font-variant-numeric: tabular-nums;
   margin-left: auto;
 }
+
+/* Candidates. A plain list: these are suggestions, not measurements. */
+.candidates {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s2);
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
+
+.candidates li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s2);
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+}
+
+.candidate-name {
+  font-weight: 700;
+}
+
+.candidate-figures {
+  color: var(--ink-faint);
+  font-size: var(--t-small);
+}

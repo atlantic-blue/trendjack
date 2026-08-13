@@ -1,5 +1,6 @@
 import type { TagVideoSource } from "../contracts/ports.ts";
 import { tagVideosSchema, type TagVideos } from "../contracts/types.ts";
+import { seenHashtagsIn } from "./candidates.ts";
 import {
   MIN_AGE_HOURS,
   rankVideos,
@@ -10,6 +11,8 @@ import {
 
 export interface BestVideosReport {
   hashtag: string;
+  /** Every video the page drew, kept for their captions rather than their counts. */
+  onThePageVideos: TagVideo[];
   /** Every video the page drew, before anything was dropped. */
   onThePage: number;
   /** Dropped for being younger than the floor, so no request was spent on them. */
@@ -63,6 +66,7 @@ export async function bestVideosFor(options: BestVideosOptions): Promise<BestVid
 
   return {
     hashtag: options.hashtag,
+    onThePageVideos: onThePage,
     onThePage: onThePage.length,
     tooYoung: onThePage.length - worthFetching(onThePage, options.now, minAgeHours).length,
     unreadable,
@@ -91,6 +95,9 @@ export function tagVideosFrom(
     platform: "tiktok",
     observedAt,
     onThePage: report.onThePage,
+    seenHashtags: seenHashtagsIn(report.onThePageVideos).filter(
+      (each) => each.hashtag !== report.hashtag,
+    ),
     videos: report.ranked.slice(0, limit).map((video) => ({
       videoId: video.videoId,
       handle: video.handle,
