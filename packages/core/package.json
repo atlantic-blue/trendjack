@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "zod": "^4.4.3",
+    "puppeteer-core": "^24.0.0",
     "@aws-sdk/client-dynamodb": "^3.1108.0",
     "@aws-sdk/lib-dynamodb": "^3.1108.0"
   },

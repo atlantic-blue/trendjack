@@ -162,7 +162,46 @@ export function describeStoreConformance(name: string, makeStore: () => Promise<
         computedAt: 9_000,
       });
     });
+
+    test("readings of a hashtag come back oldest first", async () => {
+      const store = await makeStore();
+      await store.appendTagReading(reading("storytime", 3_000, 60_000_003));
+      await store.appendTagReading(reading("storytime", 1_000, 60_000_001));
+      await store.appendTagReading(reading("storytime", 2_000, 60_000_002));
+      const found = await store.tagReadingsFor("storytime", 0);
+      assert.deepEqual(
+        found.map((each) => each.videoCount),
+        [60_000_001, 60_000_002, 60_000_003],
+      );
+    });
+
+    test("a reading before the window is left out, and one hashtag never returns another", async () => {
+      const store = await makeStore();
+      await store.appendTagReading(reading("storytime", 1_000, 10));
+      await store.appendTagReading(reading("storytime", 9_000, 20));
+      await store.appendTagReading(reading("grwm", 9_000, 99));
+      const found = await store.tagReadingsFor("storytime", 5_000);
+      assert.deepEqual(
+        found.map((each) => each.videoCount),
+        [20],
+      );
+    });
+
+    test("a hashtag never read returns nothing rather than failing", async () => {
+      const store = await makeStore();
+      assert.deepEqual(await store.tagReadingsFor("neverasked", 0), []);
+    });
   });
+}
+
+function reading(hashtag: string, observedAt: number, videoCount: number) {
+  return {
+    hashtag,
+    platform: "tiktok" as const,
+    observedAt,
+    videoCount,
+    viewCount: videoCount * 1_000,
+  };
 }
 
 function id<T extends string>(value: string): T & PostId & CreatorId {

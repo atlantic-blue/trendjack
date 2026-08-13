@@ -6,7 +6,15 @@ import {
   type QueryCommandInput,
 } from "@aws-sdk/lib-dynamodb";
 import type { Store } from "../contracts/ports.ts";
-import type { Baseline, CreatorId, Observation, Post, PostId, Score } from "../contracts/types.ts";
+import type {
+  Baseline,
+  CreatorId,
+  Observation,
+  Post,
+  PostId,
+  Score,
+  TagReading,
+} from "../contracts/types.ts";
 import { ObservationConflictError } from "./memory.ts";
 
 /**
@@ -20,6 +28,7 @@ import { ObservationConflictError } from "./memory.ts";
  *   baseline      pk = creator#<id>         sk = baseline#<metric>
  *   score         pk = post#<postId>        sk = score#<computedAt>
  *                 gsi2pk = scores           gsi2sk = <computedAt>
+ *   tag reading   pk = tag#<hashtag>        sk = reading#<observedAt>
  *
  * The two collection indexes exist because the digest needs "every post in the window" and
  * "every score since", neither of which any natural key gives you.
@@ -44,6 +53,29 @@ export class DynamoStore implements Store {
       marshallOptions: { removeUndefinedValues: true },
     });
     this.#table = options.tableName;
+  }
+
+  async appendTagReading(reading: TagReading): Promise<void> {
+    await this.#documents.send(
+      new PutCommand({
+        TableName: this.#table,
+        Item: {
+          pk: `tag#${reading.hashtag}`,
+          sk: `reading#${pad(reading.observedAt)}`,
+          body: reading,
+        },
+      }),
+    );
+  }
+
+  async tagReadingsFor(hashtag: string, since: number): Promise<TagReading[]> {
+    const items = await this.#queryAll({
+      TableName: this.#table,
+      KeyConditionExpression: "pk = :pk AND sk >= :since",
+      ExpressionAttributeValues: { ":pk": `tag#${hashtag}`, ":since": `reading#${pad(since)}` },
+      ScanIndexForward: true,
+    });
+    return items.map((item) => item["body"] as TagReading);
   }
 
   async putPost(post: Post): Promise<void> {

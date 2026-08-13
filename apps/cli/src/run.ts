@@ -14,6 +14,9 @@ import { normaliseHandle } from "@trendjack/core/panel/normalise.ts";
 import { storeFor } from "./store-for.ts";
 import { qualifyCreator, type Verdict } from "@trendjack/core/discover/qualify.ts";
 import { renderQualify } from "@trendjack/core/discover/report.ts";
+import { BrowserTikTokTagSource } from "@trendjack/core/sources/tiktok-tag.ts";
+import { recordTagReadings } from "@trendjack/core/trends/record.ts";
+import { renderRecord } from "@trendjack/core/trends/report.ts";
 
 export interface CliResult {
   exitCode: number;
@@ -32,8 +35,10 @@ const USAGE = [
   "  panel    show what is being watched, and what is wrong with it",
   "  run      poll the panel once and print the digest",
   "  qualify  check creators against the panel criteria, then print entries to paste",
+  "  tags     record how big each hashtag is, and say what changed since last time",
   "",
   "  trendjack qualify handle1 handle2",
+  "  trendjack tags storytime grwm",
   "",
   "The panel itself lives outside this repository. Point TRENDJACK_PANEL at it.",
 ].join("\n");
@@ -46,6 +51,7 @@ export async function runCli(argv: string[], environment: NodeJS.ProcessEnv): Pr
   if (command === "panel") return panelCommand(environment);
   if (command === "run") return runCommand(environment);
   if (command === "qualify") return qualifyCommand(argv.slice(1));
+  if (command === "tags") return tagsCommand(argv.slice(1), environment);
   return { exitCode: 1, output: `Unknown command "${command}".\n\n${USAGE}` };
 }
 
@@ -101,6 +107,45 @@ const QUALIFY_POSTS = 30;
  * Checks named creators. It does not search: TikTok gates search behind a signed request, so
  * the handles come from somewhere else and this decides which of them are worth watching.
  */
+/** A pause between hashtags, so a round does not arrive as one burst of requests. */
+const TAG_PACE_MS = 3_000;
+
+async function tagsCommand(argv: string[], environment: NodeJS.ProcessEnv): Promise<CliResult> {
+  const hashtags = argv
+    .map((each) => each.replace(/^#/, "").trim())
+    .filter((each) => each.length > 0);
+  if (hashtags.length === 0) return { exitCode: 1, output: "Name at least one hashtag to record." };
+
+  const executablePath = environment["TRENDJACK_CHROME"]?.trim();
+  if (!executablePath) {
+    return {
+      exitCode: 1,
+      output:
+        "Set TRENDJACK_CHROME to a Chrome binary. The size of a hashtag is not in the page " +
+        "source, so a browser has to ask for it.\n" +
+        'On a Mac that is usually "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome".',
+    };
+  }
+
+  const choice = storeFor(environment);
+  const source = new BrowserTikTokTagSource({ executablePath });
+  try {
+    const report = await recordTagReadings({
+      hashtags,
+      source,
+      store: choice.store,
+      now: Date.now(),
+      pace: () => new Promise((resolve) => setTimeout(resolve, TAG_PACE_MS)),
+    });
+    return {
+      exitCode: report.failures.length === hashtags.length ? 2 : 0,
+      output: `${renderRecord(report)}\n\n${choice.note}`,
+    };
+  } finally {
+    await source.close();
+  }
+}
+
 async function qualifyCommand(argv: string[]): Promise<CliResult> {
   const parsed = parseQualify(argv);
   if (parsed.error) return { exitCode: 1, output: parsed.error };
