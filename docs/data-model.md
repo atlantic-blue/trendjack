@@ -74,6 +74,21 @@ zeroes.
 A stored score must be replayable later. The final number alone cannot be re examined. The seven
 features that produced it can.
 
+### The topic items
+
+Two more kinds share the table, both keyed by hashtag.
+
+```
+tag reading   pk = tag#<hashtag>   sk = reading#<observedAt>   gsi2 = tags, observedAt
+tag videos    pk = tag#<hashtag>   sk = videos#<observedAt>
+```
+
+A reading is two exact counts. A videos item is the best videos on that page when it was last read,
+plus every hashtag written in the captions on it. See [topics.md](topics.md).
+
+The readings carry an index entry so that "every hashtag anybody has read" can be answered without
+a list of hashtags being configured twice.
+
 ### The keys
 
 ```mermaid
