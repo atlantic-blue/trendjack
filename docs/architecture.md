@@ -25,23 +25,29 @@ flowchart TD
         SR["sources<br/><i>one adapter per data source</i>"]
         PN["panel<br/><i>who we watch</i>"]
         PL["poll<br/><i>one round of the panel</i>"]
+        TR["trends<br/><i>hashtag sizes, growth,<br/>page videos, new hashtags</i>"]
         DG["digest<br/><i>what a person reads</i>"]
         DS["discover<br/><i>is a creator worth watching</i>"]
     end
 
     subgraph apps["apps"]
-        PO["poller<br/><i>the daily run, a Lambda</i>"]
+        PO["poller<br/><i>two entry points, one image</i>"]
         CL["cli<br/><i>the trendjack command</i>"]
         WB["web<br/><i>the page</i>"]
     end
 
     PO --> PL
+    PO --> TR
     PO --> DG
     CL --> PL
+    CL --> TR
     CL --> DS
     PL --> SR
     PL --> ST
+    TR --> SR
+    TR --> ST
     DG --> RK
+    DG --> TR
     DG --> ST
     RK --> CT
     SR --> CT
@@ -55,8 +61,12 @@ flowchart TD
 A port is an interface the domain owns. An adapter implements it. There are two ports.
 
 **`TrendSource`.** Somewhere posts can be fetched from. The port deliberately cannot ask what is
-trending, because no such question can be answered. It can only fetch what a named creator
-posted.
+trending, because no such question can be answered by naming a creator. It can only fetch what a
+named creator posted.
+
+**`TagStatsSource` and `TagVideoSource`.** The two questions a hashtag will answer: how big it is,
+and which videos it is showing. These need a browser rather than a request, and for opposite
+reasons. See [topics.md](topics.md).
 
 ```mermaid
 classDiagram
@@ -169,36 +179,53 @@ flowchart LR
 ```mermaid
 flowchart TD
     subgraph aws["Amazon Web Services, account 230345688874, eu-west-1"]
-        EB["EventBridge rule<br/>cron 0 6 every day"]
-        LAM["Lambda, container image<br/>900 second timeout, 2048 MB"]
-        ECR["Elastic Container Registry<br/>the poller image"]
+        EB["EventBridge<br/>cron 0 6 every day"]
+        EB2["EventBridge<br/>cron 20, every 6 hours"]
+        LAM["trendjack-poller<br/>2048 MB, writes the digest"]
+        TRD["trendjack-trends<br/>3008 MB, reads hashtag sizes"]
+        ECR["Elastic Container Registry<br/>one image, two entry points"]
         DDB["DynamoDB, one table"]
         S3["Private bucket<br/>page and digests"]
         CFD["CloudFront distribution"]
-        LOG["CloudWatch log group"]
+        LOG["CloudWatch log groups"]
     end
+    LAP["A laptop<br/><i>trendjack videos</i>"]
     GH["GitHub Actions<br/>deploy on merge to main"]
 
     EB --> LAM
+    EB2 --> TRD
     ECR --> LAM
+    ECR --> TRD
     LAM --> DDB
+    TRD --> DDB
+    LAP --> DDB
     LAM --> S3
     LAM --> CFD
     LAM --> LOG
+    TRD --> LOG
     CFD --> S3
     GH -->|"OpenID Connect,<br/>role trendjack-deploy"| ECR
     GH --> S3
     GH --> CFD
+
+    style LAP fill:#fdf3e3,stroke:#b3862a
 ```
 
-That is the whole footprint. One table, one bucket, one distribution, one registry, one function.
+One table, one bucket, one distribution, one registry, two functions from one image.
+
+The laptop is the part that should not be there. Ranking the videos on a hashtag page needs the
+page to draw itself, and a rendered page from that image comes back as a captcha, so that one job
+still runs from a desktop browser. See [operations.md](operations.md).
 
 ## The command line application
 
-`apps/cli` runs the same domain code from a terminal. It exists for two jobs.
+`apps/cli` runs the same domain code from a terminal. It exists for four jobs.
 
-- Run one round by hand against a local or real store, to see what the panel returns today.
-- Qualify a creator before we add them to the panel. `discover/qualify` rejects a creator with
+- `trendjack tags <hashtag...>` records how big each hashtag is and says what changed.
+- `trendjack videos <hashtag>` ranks the videos on one page and stores the result.
+
+- `trendjack run` polls the creator panel once by hand, to see what it returns today.
+- `trendjack qualify` checks a creator before we add them to the panel. It rejects a creator with
   too few posts, with no view counts, with a flat history, with a ceiling below the like floor,
   or with no post in the last 30 days. Each rejection carries the reason.
 
