@@ -79,7 +79,13 @@ export function growthForAll(readings: TagReading[]): Growth[] {
     .sort(byFastestGrowth);
 }
 
-/** Fastest growing first. A hashtag with only one reading has nothing to rank on and sorts last. */
+/**
+ * Fastest growing first. A hashtag read once has nothing to rank on and sorts last.
+ *
+ * The rate orders the list and is not a verdict. How much change is worth calling a trend is not
+ * known yet, because nobody has measured how much this number moves when nothing is happening.
+ * Until that run exists, the page leads with the change that was read, not with the rate.
+ */
 export function byFastestGrowth(left: Growth, right: Growth): number {
   return (right.dailyRate ?? -1) - (left.dailyRate ?? -1);
 }

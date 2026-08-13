@@ -22,21 +22,33 @@ describe("the topics", () => {
     expect(screen.queryByText(/0\.00% a day/)).toBeNull();
   });
 
-  test("a growing topic shows its rate and how many videos it gained", () => {
-    render(<TagList tags={[tag({ dailyRate: 0.003, videosPerDay: 605, overHours: 24 })]} />);
-    expect(screen.getByText("0.30% a day")).toBeTruthy();
-    expect(screen.getByText(/\+605 a day/)).toBeTruthy();
+  test("the change that was read leads, and the rate is marked as a projection", () => {
+    render(
+      <TagList
+        tags={[tag({ addedVideos: 605, dailyRate: 0.003, videosPerDay: 605, overHours: 24 })]}
+      />,
+    );
+    expect(screen.getByText("+605 in 1.0 days")).toBeTruthy();
+    expect(screen.getByText(/0\.30% a day if it holds/)).toBeTruthy();
   });
 
-  test("a topic that lost videos is shown falling, never as growth", () => {
-    render(<TagList tags={[tag({ dailyRate: -0.0003, videosPerDay: -607, overHours: 24 })]} />);
-    expect(screen.getByText("-0.03% a day")).toBeTruthy();
-    expect(screen.getByText(/-607 a day/)).toBeTruthy();
+  test("a small change over half an hour is said as that, never as a daily figure", () => {
+    render(
+      <TagList
+        tags={[tag({ addedVideos: 1, dailyRate: 0.0094, videosPerDay: 46, overHours: 0.52 })]}
+      />,
+    );
+    expect(screen.getByText("+1 in 31 minutes")).toBeTruthy();
+    expect(screen.queryByText(/\+46 a day/)).toBeNull();
   });
 
-  test("the window the rate was measured over is always said, so an hour is not read as a day", () => {
-    render(<TagList tags={[tag({ dailyRate: 0.003, videosPerDay: 605, overHours: 0.2 })]} />);
-    expect(screen.getByText(/measured over 12 minutes/)).toBeTruthy();
+  test("a count that fell is shown falling, never as growth", () => {
+    render(
+      <TagList
+        tags={[tag({ addedVideos: -46, dailyRate: -0.0003, videosPerDay: -607, overHours: 24 })]}
+      />,
+    );
+    expect(screen.getByText("-46 in 1.0 days")).toBeTruthy();
   });
 
   test("nothing read yet says so rather than drawing an empty list", () => {
