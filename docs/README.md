@@ -19,12 +19,14 @@ flowchart TD
     Q --> P["What is the product,<br/>and why does it exist?"]
     Q --> A["How is the system built?"]
     Q --> H["How does it decide<br/>what is trending?"]
+    Q --> T["How does it measure<br/>a topic?"]
     Q --> D["What does it store,<br/>and why?"]
     Q --> O["How does it run,<br/>and how do I fix it?"]
 
     P --> PD["product.md"]
     A --> AD["architecture.md"]
     H --> HD["heuristic.md"]
+    T --> TD["topics.md"]
     D --> DD["data-model.md"]
     O --> OD["operations.md"]
 ```
@@ -33,7 +35,9 @@ flowchart TD
   platforms force on us.
 - [architecture.md](architecture.md). The parts, the ports, and the path a video takes from
   TikTok to the page.
-- [heuristic.md](heuristic.md). The current scoring rules, as the code runs them today.
+- [heuristic.md](heuristic.md). How a single video is scored against its creator's own normal.
+- [topics.md](topics.md). How a hashtag is measured, how its videos are ranked, and where new
+  hashtags come from.
 - [data-model.md](data-model.md). The append only history, and the keys that make every read a
   query.
 - [operations.md](operations.md). The daily run, the deploy, the gates, and the known gaps.
@@ -45,6 +49,6 @@ Two documents live next to the code they describe. Read them after these.
 
 ## Status of this documentation
 
-Written on 2026-08-13, against the code on `main` at that date. Every number in these documents
+Written on 2026-08-13 and revised the same evening, against the code on `main`. Every number in these documents
 comes from the source. Where the code and an earlier plan disagree, these documents describe the
 code, and they name the difference.

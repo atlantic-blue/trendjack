@@ -2,8 +2,16 @@
 
 ## What runs today
 
-A Lambda function on a container image polls the panel once a day. It writes four digest files
-into the site bucket and clears them from the cache. A static page in the same bucket reads them.
+Two Lambda functions on one container image.
+
+`trendjack-poller` polls the creator panel once a day, writes four digest files into the site
+bucket and clears them from the cache. A static page in the same bucket reads them.
+
+`trendjack-trends` reads how big each watched hashtag is, four times a day. See
+[topics.md](topics.md).
+
+One part is not automated: ranking the videos on a hashtag page still runs from a laptop. The
+reason is below.
 
 - The page: https://d351g5ghrqojet.cloudfront.net
 - The repository: https://github.com/atlantic-blue/trendjack
@@ -208,6 +216,38 @@ so a bump is one line in a diff rather than whatever the package index served th
 
 An old copy of yt-dlp stops returning anything rather than failing loudly. That is why an empty
 answer from a source raises an error.
+
+## Why the videos job is not scheduled
+
+Reading how big a hashtag is works from Amazon Web Services. That number is sent to the browser and
+never drawn, so it can be read the moment it arrives.
+
+Reading the videos on a page needs the page to draw itself, and a rendered hashtag page comes back
+from that image as a captcha. The same request from a desktop browser at the same moment came back
+as thirty cards.
+
+So there is no schedule for it. Invoke it by hand with `{"job":"videos"}`, or run
+`trendjack videos <hashtag>` from a machine with a desktop browser.
+
+## What it took to make a browser start in that runtime
+
+Three attempts failed before the browser was asked why. The symptom was `Connection closed` for
+every hashtag, which says the pipe went away and nothing else. Turning its own output on gave the
+answer:
+
+```
+FATAL: sandbox/linux/services/credentials.cc: Check failed: Operation not permitted
+ERROR: Did not receive ping from zygote child
+Less than 64MB of free space in temporary directory for shared memory files: 0
+```
+
+Three things are wrong with that runtime from a browser's point of view. Everything outside `/tmp`
+is read only. There is no shared memory. And the process it forks its children from cannot be
+created there.
+
+So `HOME` and the cache directories point at `/tmp`, and the browser is started with
+`--no-zygote` and `--disable-dev-shm-usage`. Running it as a single process was tried and is worse:
+it then closes its own target before a page can be opened, and a test keeps that argument out.
 
 ## The gap to fix first
 
